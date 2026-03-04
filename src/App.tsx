@@ -29,7 +29,7 @@ const MODEL_NAME = "gemini-3-flash-preview";
 
 export default function App() {
   // --- STATE IDENTITAS MATERI ---
-  const [subject, setSubject] = useState('Pendidikan Agama Islam & Budi Pekerti');
+  const [subject, setSubject] = useState('Al-Islam');
   const [customSubject, setCustomSubject] = useState('');
   const [isCustomSubject, setIsCustomSubject] = useState(false);
   const [topic, setTopic] = useState('Iman Kepada Allah SWT');
@@ -45,7 +45,7 @@ export default function App() {
   const [namaKepala, setNamaKepala] = useState('Rachmawati Fitriyah, S.H,. S.Pd.'); 
   const [nbmKepala, setNbmKepala] = useState('1083916'); 
   const [kota, setKota] = useState('Probolinggo');
-  const [tanggal, setTanggal] = useState('14 Juli 2025');
+  const [tanggal, setTanggal] = useState('10 Januari 2026');
 
   // --- STATE NAVIGASI & EKSPOR ---
   const [activeTab, setActiveTab] = useState('rpp');
@@ -62,16 +62,27 @@ export default function App() {
     // Memuat logo default saat pertama kali aplikasi dijalankan
     const defaultLogoUrl = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjEsmru_VujERV-3TtynxRmoU7_tnEYvtZoCPxwEJMLOuQgqSh45ub2ttcL054b9GCMM2dIYGgbKGBG30zQdHrOWTBS8EVgndAuvphQYUMQDT1fX97YYdZ00_4OVfr2lbTzMeCZNBmwYkulYTw16llBMFcTSqWLwLP7-hd1IplgCQmo3Sl9fHlvpyOe7l3v/s145/LOGOMU%20(1)%20(2).png';
     
-    const loadDefaultLogo = async () => {
-      try {
-        const response = await fetch(defaultLogoUrl);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        reader.onloadend = () => setLogoBase64(reader.result as string);
-        reader.readAsDataURL(blob);
-      } catch (err) {
-        console.error("Gagal memuat logo default:", err);
-      }
+    const loadDefaultLogo = () => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          try {
+            setLogoBase64(canvas.toDataURL('image/png'));
+          } catch (e) {
+            console.error("Gagal mengonversi logo ke Base64:", e);
+          }
+        }
+      };
+      img.onerror = () => {
+        console.error("Gagal memuat logo default dari URL.");
+      };
+      img.src = defaultLogoUrl;
     };
     
     loadDefaultLogo();
@@ -98,7 +109,10 @@ export default function App() {
 
   const cleanText = (text: string) => {
     if (!text) return "";
-    return text.replace(/\\n/g, "\n").replace(/#/g, "").replace(/_{2,}/g, "").replace(/\s{3,}/g, " ").trim();
+    let cleaned = text.replace(/\\n/g, "\n").replace(/#/g, "").replace(/_{2,}/g, "").replace(/\s{3,}/g, " ").trim();
+    // Tambahkan newline sebelum angka jika angka tersebut berada di tengah kalimat (setelah titik) untuk merapikan penomoran yang "collapse"
+    cleaned = cleaned.replace(/([.!?])\s+(\d+\.)\s+/g, "$1\n$2 ");
+    return cleaned;
   };
 
   const processBold = (line: string) => {
@@ -117,12 +131,24 @@ export default function App() {
     const cleaned = cleanText(text);
     return cleaned.split('\n').map((line, i) => {
       if (!line.trim()) return <div key={i} className="h-2"></div>; 
-      const isListItem = /^\d+\.|\-/.test(line.trim());
+      
+      // Deteksi item daftar (angka, strip, atau bullet)
+      const listMatch = line.match(/^(\s*)(\d+\.|\-|\*|[a-z]\.)\s+(.*)$/);
+      
+      if (listMatch) {
+        const bullet = listMatch[2];
+        const content = listMatch[3];
+        return (
+          <div key={i} className={`flex gap-2 mb-2 last:mb-0 leading-relaxed text-justify ${className}`}>
+            <span className="shrink-0 font-bold min-w-[1.8rem]">{bullet}</span>
+            <div className="flex-1">{processBold(content)}</div>
+          </div>
+        );
+      }
+
       return (
         <div key={i} className={`mb-3 last:mb-0 leading-relaxed text-justify ${className}`} 
               style={{ 
-                paddingLeft: isListItem ? '1.5em' : '0', 
-                textIndent: isListItem ? '-1.5em' : '0', 
                 wordBreak: 'break-word', 
                 overflowWrap: 'break-word'
               }}>
@@ -165,8 +191,9 @@ export default function App() {
         WAJIB:
         1. Gunakan Bahasa Indonesia formal yang sangat baik.
         2. LKPD Mandiri, LKPD Kelompok, dan Penugasan harus terisi dengan instruksi kerja atau butir pertanyaan yang sangat lengkap, sistematis, dan mendalam.
-        3. Evaluasi: 10 Pilihan Ganda (A-D) dan 5 Essay berbobot tinggi.
-        4. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
+        3. PENTING: Untuk LKPD dan Penugasan, setiap butir instruksi/pertanyaan HARUS dipisahkan dengan baris baru (newline \\n) agar membentuk daftar yang rapi. Jangan menggabungkan beberapa nomor dalam satu paragraf.
+        4. Evaluasi: 10 Pilihan Ganda (A-D) dan 5 Essay berbobot tinggi.
+        5. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
         Jawab dalam format JSON murni sesuai schema.`,
         config: {
           systemInstruction: "Anda adalah Guru Ahli Kurikulum Merdeka di lingkungan SMP Muhammadiyah yang visioner. Output Anda selalu terstruktur, mendalam, dan siap pakai secara profesional.",
@@ -225,18 +252,23 @@ export default function App() {
       const element = exportAreaRef.current;
       if (!element) return;
       
-      // @ts-ignore
       const opt = {
-        margin: [15, 10, 10, 10], 
+        margin: [10, 10, 10, 10], // Margin 1cm keliling
         filename: `MODUL_${activeTab.toUpperCase()}_${topic.replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
-          scale: 2, 
+          scale: 3, 
           useCORS: true, 
-          allowTaint: true,
           letterRendering: true,
           logging: false,
-          backgroundColor: '#ffffff',
+          // Koreksi lebar render: 190mm ≈ 718px. 
+          // Memaksa lebar ini mencegah elemen bergeser ke kanan akibat capture yang terlalu lebar.
+          width: 718, 
+          windowWidth: 718,
+          x: 0,
+          y: 0,
+          scrollX: 0,
+          scrollY: 0,
         },
         jsPDF: { unit: 'mm', format: paperDim, orientation: 'portrait', compress: true },
         pagebreak: { mode: ['css', 'legacy'], avoid: ['table', 'tr', '.section-block', '.header-bg'] }
@@ -267,6 +299,7 @@ export default function App() {
         useCORS: true, 
         allowTaint: true,
         backgroundColor: '#ffffff',
+        windowWidth: 1200,
         onclone: (clonedDoc: Document) => {
           const clonedElement = clonedDoc.getElementById('export-area');
           if (clonedElement) {
@@ -303,7 +336,7 @@ export default function App() {
 
   const getHeaderTitle = () => {
     switch(activeTab) {
-      case 'rpp': return 'RENCANA PELAKSANAAN PEMBELAJARAN (MODUL AJAR)';
+      case 'rpp': return 'RENCANA PELAKSANAAN PEMBELAJARAN';
       case 'lkpd_individu': return 'LEMBAR KERJA PESERTA DIDIK (MANDIRI)';
       case 'lkpd_kelompok': return 'LEMBAR KERJA PESERTA DIDIK (KELOMPOK)';
       case 'penugasan': return 'LEMBAR PENUGASAN TERSTRUKTUR';
@@ -329,7 +362,7 @@ export default function App() {
     <table className="w-full border-collapse mb-4 text-[11px]" style={{ border: '1pt solid black', tableLayout: 'fixed', boxSizing: 'border-box', borderSpacing: 0 }}>
       <tbody>
         <tr>
-          <td className="p-2 border border-black" style={{ border: '1pt solid black', width: '50%' }}>Nama: ...................................................................</td>
+          <td className="p-2 border border-black" style={{ border: '1pt solid black', width: '50%' }}>Nama: ............................................................</td>
           <td className="p-2 border border-black" style={{ border: '1pt solid black', width: '25%' }}>Kelas: .................</td>
           <td className="p-2 border border-black" style={{ border: '1pt solid black', width: '25%' }}>Tanggal: ............</td>
         </tr>
@@ -344,8 +377,8 @@ export default function App() {
           {logoBase64 && <img src={logoBase64} alt="Logo" style={{ width: '85px', height: '85px', objectFit: 'contain' }} crossOrigin="anonymous" />}
         </div>
         
-        <div style={{ textAlign: 'center', width: '100%', paddingLeft: '85px', paddingRight: '20px' }}>
-          <p style={{ margin: '0', fontSize: '11pt', fontWeight: 'bold' }}>MAJELIS PENDIDIKAN DASAR MENENGAH DAN PENDIDIKAN NON FORMAL</p>
+        <div style={{ textAlign: 'center', width: '100%', paddingLeft: '85px', paddingRight: '20px', boxSizing: 'border-box' }}>
+          <p style={{ margin: '0', fontSize: '10pt', fontWeight: 'bold' }}>MAJELIS PENDIDIKAN DASAR MENENGAH DAN PENDIDIKAN NON FORMAL</p>
           <p style={{ margin: '0', fontSize: '11pt', fontWeight: 'bold' }}>PIMPINAN DAERAH MUHAMMADIYAH KOTA PROBOLINGGO</p>
           <h1 style={{ margin: '2pt 0', fontSize: '15pt', fontWeight: 'bold', textTransform: 'uppercase' }}>SMP MUHAMMADIYAH 1 KOTA PROBOLINGGO</h1>
           <p style={{ margin: '0', fontSize: '10pt', fontWeight: 'bold' }}>TERAKREDITASI A</p>
@@ -354,8 +387,8 @@ export default function App() {
         </div>
       </div>
       
-      <div style={{ borderTop: '2.5pt solid black', marginTop: '6pt', width: '100%' }}></div>
-      <div style={{ borderTop: '0.5pt solid black', marginTop: '2pt', width: '100%', marginBottom: '10pt' }}></div>
+      <div style={{ borderTop: '2.5pt solid black', marginTop: '6pt', width: '100%', boxSizing: 'border-box' }}></div>
+      <div style={{ borderTop: '0.5pt solid black', marginTop: '2pt', width: '100%', marginBottom: '10pt', boxSizing: 'border-box' }}></div>
     </div>
   );
 
@@ -502,7 +535,7 @@ export default function App() {
                     </div>
                   </div>
                   <button onClick={() => handleGenerate()} disabled={isLoading} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-50">
-                    {isLoading ? <Loader2 className="animate-spin" /> : <Sparkles className="text-yellow-400" />} GENERATE MODUL LENGKAP
+                    {isLoading ? <Loader2 className="animate-spin" /> : <Sparkles className="text-yellow-400" />} BUAT MODUL LENGKAP
                   </button>
                   {error && <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs flex items-center gap-2"><AlertTriangle size={14}/> {error}</div>}
                 </div>
@@ -577,9 +610,9 @@ export default function App() {
                 <div style={{ width: '100%', boxSizing: 'border-box' }}>
                   {/* Identitas Table */}
                   <div className="section-block" style={{ pageBreakInside: 'avoid' }}>
-                    <table border={1} className="w-full border-collapse border border-black text-left" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0 }}>
+                    <table border={1} className="w-full border-collapse border border-black text-left" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                       <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7' }}>
+                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
                           <td colSpan={3} className="p-3 font-bold text-center uppercase text-[12px]" style={{ border: '1pt solid black' }}>
                             {getHeaderTitle()}
                           </td>
@@ -605,9 +638,9 @@ export default function App() {
 
                   {/* Section-by-section with forced page-break-inside avoid */}
                   <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0 }}>
+                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                       <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7' }}>
+                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
                           <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>A. IDENTIFIKASI MATERI</td>
                         </tr>
                         <tr>
@@ -618,9 +651,9 @@ export default function App() {
                   </div>
 
                   <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0 }}>
+                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                       <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7' }}>
+                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
                           <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>B. DESAIN PEMBELAJARAN</td>
                         </tr>
                         <tr>
@@ -632,14 +665,14 @@ export default function App() {
 
                   {isKBCVisible && (
                     <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                      <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0 }}>
+                      <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                         <tbody>
-                          <tr className="header-bg" style={{ backgroundColor: '#b4c7e7' }}>
+                          <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
                             <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>C. KURIKULUM BERBASIS CINTA (KBC) INTEGRATED</td>
                           </tr>
                           <tr>
                             <td className="p-0" style={{ border: '1pt solid black' }}>
-                              <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0 }}>
+                              <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                                 <tbody>
                                   <tr style={{ borderBottom: '1pt solid black' }}>
                                     <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Cinta Allah</td>
@@ -663,14 +696,14 @@ export default function App() {
                   )}
 
                   <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0 }}>
+                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                       <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7' }}>
+                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
                           <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>{isKBCVisible ? 'D' : 'C'}. KEGIATAN PEMBELAJARAN</td>
                         </tr>
                         <tr>
                           <td className="p-0" style={{ border: '1pt solid black' }}>
-                            <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0 }}>
+                            <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                               <tbody>
                                 <tr style={{ borderBottom: '1pt solid black' }}>
                                   <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Pendahuluan</td>
@@ -693,14 +726,14 @@ export default function App() {
                   </div>
 
                   <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0 }}>
+                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                       <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7' }}>
+                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
                           <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>{isKBCVisible ? 'E' : 'D'}. ASESMEN & REFLEKSI</td>
                         </tr>
                         <tr>
                           <td className="p-0" style={{ border: '1pt solid black' }}>
-                            <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0 }}>
+                            <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                               <tbody>
                                 <tr style={{ borderBottom: '1pt solid black' }}>
                                   <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Formatif</td>
@@ -723,7 +756,7 @@ export default function App() {
                 <div style={{ width: '100%', boxSizing: 'border-box' }}>
                   {/* Forced margin 1cm top for evaluations */}
                   <div className="section-block" style={{ paddingTop: isExportingMode ? '10mm' : '0' }}>
-                    <table border={1} className="w-full border-collapse border border-black mb-4" style={{ tableLayout: 'fixed', borderSpacing: 0 }}>
+                    <table border={1} className="w-full border-collapse border border-black mb-4" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                         <tbody><tr className="header-bg" style={{ backgroundColor: '#b4c7e7' }}><td className="p-3 font-bold text-center uppercase text-[12px]" style={{ border: '1pt solid black' }}>{getHeaderTitle()}</td></tr></tbody>
                     </table>
                   </div>
@@ -740,9 +773,15 @@ export default function App() {
                         <div className="space-y-4">
                           {result.evaluasi.pilgan.map((item, idx) => (
                             <div key={idx} className="mb-4 section-block" style={{ pageBreakInside: 'avoid' }}>
-                              <div className="font-bold text-[12px] mb-1">{idx + 1}. {item.soal}</div>
+                              <div className="font-bold text-[12px] mb-1 flex gap-2">
+                                <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
+                                <span>{item.soal}</span>
+                              </div>
                               <div className="grid grid-cols-2 gap-x-10 pl-5 text-[11px]">
-                                <div>A. {item.a}</div><div>C. {item.c}</div><div>B. {item.b}</div><div>D. {item.d}</div>
+                                <div className="flex gap-1"><span className="shrink-0">A.</span><span>{item.a}</span></div>
+                                <div className="flex gap-1"><span className="shrink-0">C.</span><span>{item.c}</span></div>
+                                <div className="flex gap-1"><span className="shrink-0">B.</span><span>{item.b}</span></div>
+                                <div className="flex gap-1"><span className="shrink-0">D.</span><span>{item.d}</span></div>
                               </div>
                               {showAnswers && <div className="mt-1 text-blue-800 font-bold italic pl-5 text-[11px] bg-blue-50 py-1 rounded">Kunci Jawaban: {item.kunci?.toUpperCase()}</div>}
                             </div>
@@ -755,7 +794,10 @@ export default function App() {
                         <div className="space-y-8">
                           {result.evaluasi.essay.map((item, idx) => (
                             <div key={idx} className="mb-6 section-block" style={{ pageBreakInside: 'avoid' }}>
-                              <div className="font-bold text-[12px] mb-2">{idx + 1}. {item.soal}</div>
+                              <div className="font-bold text-[12px] mb-2 flex gap-2">
+                                <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
+                                <span>{item.soal}</span>
+                              </div>
                               <div className="h-24 border border-slate-400 mt-2 mb-2 w-full"></div>
                               {showAnswers && <div className="text-blue-800 text-[11px] font-bold italic bg-blue-50 p-2 rounded">Pedoman Jawaban: {item.kunci}</div>}
                             </div>
@@ -775,7 +817,7 @@ export default function App() {
                         </div>
                         <div className="border border-black p-8 min-h-[500px]" style={{ border: '1.5pt solid black', boxSizing: 'border-box' }}>
                           {activeTab === 'instrumen' ? (
-                            <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0 }}>
+                            <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                               <thead>
                                 <tr className="bg-slate-100 font-bold text-[11px]">
                                   <td className="p-3 border border-black w-32" style={{ border: '1pt solid black' }}>Kriteria Penilaian</td>
