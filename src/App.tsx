@@ -57,6 +57,18 @@ export default function App() {
   const [result, setResult] = useState<ResultData | null>(null);
   const [error, setError] = useState('');
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
+  const [userApiKey, setUserApiKey] = useState('');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem('gemini_api_key');
+    if (savedKey) setUserApiKey(savedKey);
+  }, []);
+
+  const saveApiKey = (key: string) => {
+    setUserApiKey(key);
+    localStorage.setItem('gemini_api_key', key);
+  };
 
   useEffect(() => {
     // Memuat logo default saat pertama kali aplikasi dijalankan
@@ -175,9 +187,9 @@ export default function App() {
     setIsLoading(true); 
     setError('');
     
-    const apiKeyToUse = process.env.GEMINI_API_KEY || "";
+    const apiKeyToUse = userApiKey || process.env.GEMINI_API_KEY || "";
     if (!apiKeyToUse) {
-      setError("API Key tidak ditemukan.");
+      setError("API Key tidak ditemukan. Silakan masukkan API Key Gemini di panel pengaturan.");
       setIsLoading(false);
       return;
     }
@@ -532,6 +544,34 @@ export default function App() {
                     <div className="space-y-1 pt-2">
                        <label className="text-[10px] font-black text-blue-600 uppercase ml-1">Judul Materi (Topic)</label>
                        <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="Contoh: Meneladani Asmaul Husna..." className="w-full p-3 border-2 border-blue-200 rounded-xl font-black text-lg focus:border-blue-500 focus:ring-0 transition-all bg-white" />
+                    </div>
+
+                    {/* API KEY INPUT */}
+                    <div className="pt-2 border-t border-slate-100 mt-2">
+                      <button 
+                        onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+                        className="text-[10px] font-bold text-slate-400 flex items-center gap-1 hover:text-blue-600 transition-all"
+                      >
+                        <Settings2 size={12} /> {showApiKeyInput ? 'Sembunyikan Pengaturan API' : 'Pengaturan API Gemini (Opsional)'}
+                      </button>
+                      
+                      {showApiKeyInput && (
+                        <div className="mt-2 p-3 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
+                          <label className="text-[10px] font-bold text-blue-600 uppercase block">Gemini API Key</label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="password" 
+                              value={userApiKey} 
+                              onChange={e => saveApiKey(e.target.value)}
+                              placeholder="Masukkan API Key Anda..." 
+                              className="flex-1 p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                          </div>
+                          <p className="text-[9px] text-slate-500 leading-tight">
+                            * API Key disimpan secara lokal di browser Anda. Gunakan jika aplikasi tidak berjalan di Vercel atau ingin menggunakan kuota pribadi.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button onClick={() => handleGenerate()} disabled={isLoading} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-50">
