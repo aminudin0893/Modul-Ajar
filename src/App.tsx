@@ -73,7 +73,7 @@ export default function App() {
 
   useEffect(() => {
     // Memuat logo default saat pertama kali aplikasi dijalankan
-    const defaultLogoUrl = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjQ_YzjTJk-7v72ePhBW1-3bSZJUhqGN7B-OKSz7CEBsUxPVdcRyRHz5RS_VDh1cychJlGq9QLOyfHuYj8ZFc7Xi8SmNAcWHD7C7Yuh-Qnwb-3cy0ovpqC_YwEyz6KNZza0AX3ycnpuyrg00NPicg9PuKCiw8aeRYVF8pV4K9y8Qec7BooRX8eDqo6hUg/s1600/LOGOMU.png';
+    const defaultLogoUrl = '/favicon.ico';
     
     const loadDefaultLogo = () => {
       const img = new Image();
@@ -96,7 +96,7 @@ export default function App() {
       img.onerror = () => {
         console.warn("Gagal memuat logo default dari URL utama, mencoba fallback.");
         // Fallback ke URL alternatif jika utama gagal
-        const fallbackUrl = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjEsmru_VujERV-3TtynxRmoU7_tnEYvtZoCPxwEJMLOuQgqSh45ub2ttcL054b9GCMM2dIYGgbKGBG30zQdHrOWTBS8EVgndAuvphQYUMQDT1fX97YYdZ00_4OVfr2lbTzMeCZNBmwYkulYTw16llBMFcTSqWLwLP7-hd1IplgCQmo3Sl9fHlvpyOe7l3v/s145/LOGOMU%20(1)%20(2).png';
+        const fallbackUrl = '/favicon.ico';
         setLogoBase64(fallbackUrl);
       };
       img.src = defaultLogoUrl;
@@ -393,7 +393,7 @@ export default function App() {
   );
 
   const InstitutionalKop = () => {
-    const sampleLogo = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjQ_YzjTJk-7v72ePhBW1-3bSZJUhqGN7B-OKSz7CEBsUxPVdcRyRHz5RS_VDh1cychJlGq9QLOyfHuYj8ZFc7Xi8SmNAcWHD7C7Yuh-Qnwb-3cy0ovpqC_YwEyz6KNZza0AX3ycnpuyrg00NPicg9PuKCiw8aeRYVF8pV4K9y8Qec7BooRX8eDqo6hUg/s1600/LOGOMU.png';
+    const sampleLogo = '/favicon.ico';
     return (
       <div style={{ width: '100%', marginBottom: '15pt', boxSizing: 'border-box', position: 'relative', pageBreakInside: 'avoid' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100px' }}>
@@ -462,7 +462,7 @@ export default function App() {
                         <div className="flex items-center gap-3 p-2 bg-white border rounded-lg shadow-sm">
                           <div className="w-12 h-12 border rounded bg-slate-50 flex items-center justify-center overflow-hidden p-1 flex-shrink-0">
                             <img 
-                              src={logoBase64 || 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjQ_YzjTJk-7v72ePhBW1-3bSZJUhqGN7B-OKSz7CEBsUxPVdcRyRHz5RS_VDh1cychJlGq9QLOyfHuYj8ZFc7Xi8SmNAcWHD7C7Yuh-Qnwb-3cy0ovpqC_YwEyz6KNZza0AX3ycnpuyrg00NPicg9PuKCiw8aeRYVF8pV4K9y8Qec7BooRX8eDqo6hUg/s1600/LOGOMU.png'} 
+                              src={logoBase64 || '/favicon.ico'} 
                               alt="Preview" 
                               className="w-full h-full object-contain" 
                               crossOrigin="anonymous" 
