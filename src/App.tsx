@@ -73,7 +73,7 @@ export default function App() {
 
   useEffect(() => {
     // Memuat logo default saat pertama kali aplikasi dijalankan
-    const defaultLogoUrl = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjEsmru_VujERV-3TtynxRmoU7_tnEYvtZoCPxwEJMLOuQgqSh45ub2ttcL054b9GCMM2dIYGgbKGBG30zQdHrOWTBS8EVgndAuvphQYUMQDT1fX97YYdZ00_4OVfr2lbTzMeCZNBmwYkulYTw16llBMFcTSqWLwLP7-hd1IplgCQmo3Sl9fHlvpyOe7l3v/s145/LOGOMU%20(1)%20(2).png';
+    const defaultLogoUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Logo_Muhammadiyah.png/240px-Logo_Muhammadiyah.png';
     
     const loadDefaultLogo = () => {
       const img = new Image();
@@ -88,12 +88,16 @@ export default function App() {
           try {
             setLogoBase64(canvas.toDataURL('image/png'));
           } catch (e) {
-            console.error("Gagal mengonversi logo ke Base64:", e);
+            console.warn("Gagal mengonversi logo ke Base64, menggunakan URL langsung.");
+            setLogoBase64(defaultLogoUrl);
           }
         }
       };
       img.onerror = () => {
-        console.error("Gagal memuat logo default dari URL.");
+        console.warn("Gagal memuat logo default dari URL utama, mencoba fallback.");
+        // Fallback ke URL alternatif jika utama gagal
+        const fallbackUrl = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjEsmru_VujERV-3TtynxRmoU7_tnEYvtZoCPxwEJMLOuQgqSh45ub2ttcL054b9GCMM2dIYGgbKGBG30zQdHrOWTBS8EVgndAuvphQYUMQDT1fX97YYdZ00_4OVfr2lbTzMeCZNBmwYkulYTw16llBMFcTSqWLwLP7-hd1IplgCQmo3Sl9fHlvpyOe7l3v/s145/LOGOMU%20(1)%20(2).png';
+        setLogoBase64(fallbackUrl);
       };
       img.src = defaultLogoUrl;
     };
@@ -206,7 +210,7 @@ export default function App() {
         2. Pastikan bagian "Target Peserta Didik" (identifikasi.pesertaDidik) secara eksplisit menyebutkan "${kelas}".
         3. LKPD Mandiri, LKPD Kelompok, dan Penugasan harus terisi dengan instruksi kerja atau butir pertanyaan yang sangat lengkap, sistematis, dan mendalam.
         4. PENTING: Untuk LKPD dan Penugasan, setiap butir instruksi/pertanyaan HARUS dipisahkan dengan baris baru (newline \\n) agar membentuk daftar yang rapi. Jangan menggabungkan beberapa nomor dalam satu paragraf.
-        5. Tambahkan bagian "materiLengkap" yang berisi ringkasan materi pembelajaran yang terstruktur, mendalam, dan sesuai EYD untuk dipelajari siswa.
+        5. Tambahkan bagian "materiLengkap" yang berisi penjelasan konsep secara runtut, komunikatif, dan mendalam. Materi WAJIB dipecah menjadi beberapa sub-bab yang sistematis. Gunakan format paragraf standar dengan spasi antar paragraf yang jelas (gunakan double newline \\n\\n untuk antar paragraf).
         6. Evaluasi: 10 Pilihan Ganda (A-D) dan 5 Essay berbobot tinggi.
         7. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
         Jawab dalam format JSON murni sesuai schema.`,
@@ -240,7 +244,7 @@ export default function App() {
                 }
               }
             },
-            required: ["identifikasi", "kurikulumCinta", "desainPembelajaran", "pengalamanBelajar", "asesmen", "lkpdIndividu", "lkpdKelompok", "penugasanIndividu", "rubrikPenilaian", "evaluasi"]
+            required: ["identifikasi", "kurikulumCinta", "desainPembelajaran", "pengalamanBelajar", "asesmen", "materiLengkap", "lkpdIndividu", "lkpdKelompok", "penugasanIndividu", "rubrikPenilaian", "evaluasi"]
           }
         }
       });
