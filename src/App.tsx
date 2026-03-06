@@ -73,7 +73,7 @@ export default function App() {
 
   useEffect(() => {
     // Memuat logo default saat pertama kali aplikasi dijalankan
-    const defaultLogoUrl = '/favicon.ico';
+    const defaultLogoUrl = 'https://cdn-icons-png.flaticon.com/512/167/167707.png';
     
     const loadDefaultLogo = () => {
       const img = new Image();
@@ -96,7 +96,7 @@ export default function App() {
       img.onerror = () => {
         console.warn("Gagal memuat logo default dari URL utama, mencoba fallback.");
         // Fallback ke URL alternatif jika utama gagal
-        const fallbackUrl = '/favicon.ico';
+        const fallbackUrl = 'https://cdn-icons-png.flaticon.com/512/167/167707.png';
         setLogoBase64(fallbackUrl);
       };
       img.src = defaultLogoUrl;
@@ -195,23 +195,29 @@ export default function App() {
             const line = item.content || "";
             const i = item.key;
             
+            const isArabic = /[\u0600-\u06FF]/.test(line);
+            
             const listMatch = line.match(/^(\s*)(\d+\.|\-|\*|[a-z]\.)\s+(.*)$/);
             if (listMatch) {
               const bullet = listMatch[2];
               const content = listMatch[3];
               return (
-                <div key={i} className={`flex gap-2 mb-2 last:mb-0 leading-relaxed text-justify ${className}`}>
+                <div key={i} className={`flex gap-2 mb-2 last:mb-0 leading-relaxed ${isArabic ? 'text-right' : 'text-justify'} ${className}`} style={isArabic ? { direction: 'rtl' } : {}}>
                   <span className="shrink-0 font-bold min-w-[1.8rem]">{bullet}</span>
-                  <div className="flex-1">{processBold(content)}</div>
+                  <div className={`flex-1 ${isArabic ? 'text-[18px] font-serif leading-[1.8]' : ''}`}>{processBold(content)}</div>
                 </div>
               );
             }
             
             return (
-              <div key={i} className={`mb-3 last:mb-0 leading-relaxed text-justify ${className}`} 
+              <div key={i} className={`mb-3 last:mb-0 leading-relaxed ${isArabic ? 'text-right' : 'text-justify'} ${className}`} 
                     style={{ 
                       wordBreak: 'break-word', 
-                      overflowWrap: 'break-word'
+                      overflowWrap: 'break-word',
+                      direction: isArabic ? 'rtl' : 'ltr',
+                      fontSize: isArabic ? '18px' : 'inherit',
+                      fontFamily: isArabic ? 'serif' : 'inherit',
+                      lineHeight: isArabic ? '1.8' : 'inherit'
                     }}>
                 {processBold(line)}
               </div>
@@ -449,7 +455,7 @@ export default function App() {
   );
 
   const InstitutionalKop = () => {
-    const sampleLogo = '/favicon.ico';
+    const sampleLogo = 'https://cdn-icons-png.flaticon.com/512/167/167707.png';
     return (
       <div style={{ width: '100%', marginBottom: '15pt', boxSizing: 'border-box', position: 'relative', pageBreakInside: 'avoid' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100px' }}>
@@ -518,7 +524,7 @@ export default function App() {
                         <div className="flex items-center gap-3 p-2 bg-white border rounded-lg shadow-sm">
                           <div className="w-12 h-12 border rounded bg-slate-50 flex items-center justify-center overflow-hidden p-1 flex-shrink-0">
                             <img 
-                              src={logoBase64 || '/favicon.ico'} 
+                              src={logoBase64 || 'https://cdn-icons-png.flaticon.com/512/167/167707.png'} 
                               alt="Preview" 
                               className="w-full h-full object-contain" 
                               crossOrigin="anonymous" 
