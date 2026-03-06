@@ -50,7 +50,7 @@ export default function App() {
 
   // --- STATE NAVIGASI & EKSPOR ---
   const [activeTab, setActiveTab] = useState('rpp');
-  const [paperFormat, setPaperFormat] = useState('f4'); 
+  const [paperFormat, setPaperFormat] = useState('a4'); 
   const [isLoading, setIsLoading] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isExportingMode, setIsExportingMode] = useState(false);
@@ -197,29 +197,37 @@ export default function App() {
             const i = item.key;
             
             const isArabic = /[\u0600-\u06FF]/.test(line);
-            const textAlign = isArabic ? 'text-right' : (isExportingMode ? 'text-left' : 'text-justify');
             
             const listMatch = line.match(/^(\s*)(\d+\.|\-|\*|[a-z]\.)\s+(.*)$/);
             if (listMatch) {
               const bullet = listMatch[2];
               const content = listMatch[3];
               return (
-                <div key={i} className={`flex gap-2 mb-2 last:mb-0 leading-relaxed ${textAlign} ${className}`} style={isArabic ? { direction: 'rtl' } : {}}>
-                  <span className="shrink-0 font-bold min-w-[1.8rem]">{bullet}</span>
+                <div key={i} className={`flex gap-2 mb-2 last:mb-0 leading-relaxed ${className}`} 
+                     style={{ 
+                       direction: isArabic ? 'rtl' : 'ltr',
+                       textAlign: isArabic ? 'right' : (isExportingMode ? 'left' : 'justify'),
+                       letterSpacing: isExportingMode ? '0.4px' : 'normal',
+                       wordSpacing: isExportingMode ? '0.6px' : 'normal'
+                     }}>
+                  <span className="shrink-0 font-bold min-w-[1.8rem]" style={{ marginRight: isExportingMode ? '4px' : '0' }}>{bullet}</span>
                   <div className={`flex-1 ${isArabic ? 'text-[18px] font-serif leading-[1.8]' : ''}`}>{processBold(content)}</div>
                 </div>
               );
             }
             
             return (
-              <div key={i} className={`mb-3 last:mb-0 leading-relaxed ${textAlign} ${className}`} 
+              <div key={i} className={`mb-3 last:mb-0 leading-relaxed ${className}`} 
                     style={{ 
                       wordBreak: 'break-word', 
                       overflowWrap: 'break-word',
                       direction: isArabic ? 'rtl' : 'ltr',
+                      textAlign: isArabic ? 'right' : (isExportingMode ? 'left' : 'justify'),
                       fontSize: isArabic ? '18px' : 'inherit',
                       fontFamily: isArabic ? 'serif' : 'inherit',
-                      lineHeight: isArabic ? '1.8' : 'inherit'
+                      lineHeight: isArabic ? '1.8' : 'inherit',
+                      letterSpacing: isExportingMode ? '0.4px' : 'normal',
+                      wordSpacing: isExportingMode ? '0.6px' : 'normal'
                     }}>
                 {processBold(line)}
               </div>
@@ -346,15 +354,11 @@ export default function App() {
         filename: `MODUL_${activeTab.toUpperCase()}_${topic.replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
-          scale: 3, 
+          scale: 2, 
           useCORS: true, 
           logging: false,
-          // Koreksi lebar render: 190mm ≈ 718px. 
-          // Memaksa lebar ini mencegah elemen bergeser ke kanan akibat capture yang terlalu lebar.
-          width: 718, 
-          windowWidth: 718,
-          x: 0,
-          y: 0,
+          letterRendering: true,
+          windowWidth: 1024,
           scrollX: 0,
           scrollY: 0,
         },
@@ -469,7 +473,7 @@ export default function App() {
             <img src={logoBase64 || sampleLogo} alt="Logo" style={{ width: '85px', height: '85px', objectFit: 'contain' }} crossOrigin="anonymous" />
           </div>
         
-        <div style={{ textAlign: 'center', width: '100%', paddingLeft: '85px', paddingRight: '20px', boxSizing: 'border-box' }}>
+        <div style={{ textAlign: 'center', width: '100%', paddingLeft: '85px', paddingRight: '20px', boxSizing: 'border-box', letterSpacing: isExportingMode ? '0.2px' : 'normal' }}>
           <p style={{ margin: '0', fontSize: '10pt', fontWeight: 'bold' }}>MAJELIS PENDIDIKAN DASAR MENENGAH DAN PENDIDIKAN NON FORMAL</p>
           <p style={{ margin: '0', fontSize: '11pt', fontWeight: 'bold' }}>PIMPINAN DAERAH MUHAMMADIYAH KOTA PROBOLINGGO</p>
           <h1 style={{ margin: '2pt 0', fontSize: '15pt', fontWeight: 'bold', textTransform: 'uppercase' }}>SMP MUHAMMADIYAH 1 KOTA PROBOLINGGO</h1>
@@ -596,8 +600,8 @@ export default function App() {
                     </div>
                     <div className="flex gap-4 p-2 bg-white rounded-lg border border-orange-200">
                       <span className="text-[10px] font-bold text-slate-400 uppercase self-center mr-2">Ukuran Kertas:</span>
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-xs"><input type="radio" checked={paperFormat === 'f4'} onChange={() => setPaperFormat('f4')} className="accent-orange-600" /> F4</label>
                       <label className="flex items-center gap-2 cursor-pointer font-bold text-xs"><input type="radio" checked={paperFormat === 'a4'} onChange={() => setPaperFormat('a4')} className="accent-orange-600" /> A4</label>
-                      <label className="flex items-center gap-2 cursor-pointer font-bold text-xs"><input type="radio" checked={paperFormat === 'f4'} onChange={() => setPaperFormat('f4')} className="accent-orange-600" /> F4 (Folio)</label>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <input type="text" value={namaKepala} onChange={e => setNamaKepala(e.target.value)} placeholder="Nama Kepala" className="w-full p-2 border rounded text-xs bg-white font-semibold" />
@@ -741,7 +745,9 @@ export default function App() {
                    marginLeft: isExportingMode ? '0' : 'auto', 
                    marginRight: isExportingMode ? '0' : 'auto',
                    padding: isExportingMode ? '0' : '40px',
-                   backgroundColor: '#ffffff'
+                   backgroundColor: '#ffffff',
+                   letterSpacing: isExportingMode ? '0.2px' : 'normal',
+                   wordSpacing: isExportingMode ? '0.4px' : 'normal'
                  }}>
               
               {/* --- HEADER --- */}
