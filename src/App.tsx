@@ -196,13 +196,14 @@ export default function App() {
             const i = item.key;
             
             const isArabic = /[\u0600-\u06FF]/.test(line);
+            const textAlign = isArabic ? 'text-right' : (isExportingMode ? 'text-left' : 'text-justify');
             
             const listMatch = line.match(/^(\s*)(\d+\.|\-|\*|[a-z]\.)\s+(.*)$/);
             if (listMatch) {
               const bullet = listMatch[2];
               const content = listMatch[3];
               return (
-                <div key={i} className={`flex gap-2 mb-2 last:mb-0 leading-relaxed ${isArabic ? 'text-right' : 'text-justify'} ${className}`} style={isArabic ? { direction: 'rtl' } : {}}>
+                <div key={i} className={`flex gap-2 mb-2 last:mb-0 leading-relaxed ${textAlign} ${className}`} style={isArabic ? { direction: 'rtl' } : {}}>
                   <span className="shrink-0 font-bold min-w-[1.8rem]">{bullet}</span>
                   <div className={`flex-1 ${isArabic ? 'text-[18px] font-serif leading-[1.8]' : ''}`}>{processBold(content)}</div>
                 </div>
@@ -210,7 +211,7 @@ export default function App() {
             }
             
             return (
-              <div key={i} className={`mb-3 last:mb-0 leading-relaxed ${isArabic ? 'text-right' : 'text-justify'} ${className}`} 
+              <div key={i} className={`mb-3 last:mb-0 leading-relaxed ${textAlign} ${className}`} 
                     style={{ 
                       wordBreak: 'break-word', 
                       overflowWrap: 'break-word',
@@ -346,7 +347,6 @@ export default function App() {
         html2canvas: { 
           scale: 3, 
           useCORS: true, 
-          letterRendering: true,
           logging: false,
           // Koreksi lebar render: 190mm ≈ 718px. 
           // Memaksa lebar ini mencegah elemen bergeser ke kanan akibat capture yang terlalu lebar.
