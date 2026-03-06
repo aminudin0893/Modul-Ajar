@@ -146,30 +146,77 @@ export default function App() {
   const renderFormattedText = (text: string, className = "") => {
     if (!text) return null;
     const cleaned = cleanText(text);
-    return cleaned.split('\n').map((line, i) => {
-      if (!line.trim()) return <div key={i} className="h-2"></div>; 
-      
-      // Deteksi item daftar (angka, strip, atau bullet)
-      const listMatch = line.match(/^(\s*)(\d+\.|\-|\*|[a-z]\.)\s+(.*)$/);
-      
-      if (listMatch) {
-        const bullet = listMatch[2];
-        const content = listMatch[3];
-        return (
-          <div key={i} className={`flex gap-2 mb-2 last:mb-0 leading-relaxed text-justify ${className}`}>
-            <span className="shrink-0 font-bold min-w-[1.8rem]">{bullet}</span>
-            <div className="flex-1">{processBold(content)}</div>
-          </div>
-        );
+    const lines = cleaned.split('\n');
+    
+    // Logic grouping untuk mencegah pemotongan antara judul dan isi (keep with next)
+    const groups: { type: 'line' | 'spacer', content?: string, key: number }[][] = [];
+    let currentGroup: { type: 'line' | 'spacer', content?: string, key: number }[] = [];
+    
+    lines.forEach((line, i) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        if (currentGroup.length > 0) {
+          groups.push(currentGroup);
+          currentGroup = [];
+        }
+        groups.push([{ type: 'spacer', key: i }]);
+        return;
       }
-
+      
+      // Deteksi judul sub-bab atau poin utama
+      const isHeading = trimmed.length < 150 && (
+        /^\d+\./.test(trimmed) || 
+        /^[A-Z][A-Z\s]{3,}$/.test(trimmed) ||
+        trimmed.startsWith('Pengertian') || 
+        trimmed.startsWith('Dalil') || 
+        trimmed.startsWith('Hukum') || 
+        trimmed.startsWith('Hikmah') ||
+        trimmed.endsWith(':')
+      );
+      
+      if (isHeading && currentGroup.length > 0) {
+        groups.push(currentGroup);
+        currentGroup = [];
+      }
+      
+      currentGroup.push({ type: 'line', content: line, key: i });
+    });
+    
+    if (currentGroup.length > 0) groups.push(currentGroup);
+    
+    return groups.map((group, gIdx) => {
+      if (group[0].type === 'spacer') {
+        return <div key={`g-${gIdx}`} className="h-2"></div>;
+      }
+      
       return (
-        <div key={i} className={`mb-3 last:mb-0 leading-relaxed text-justify ${className}`} 
-              style={{ 
-                wordBreak: 'break-word', 
-                overflowWrap: 'break-word'
-              }}>
-          {processBold(line)}
+        <div key={`g-${gIdx}`} className="section-block" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+          {group.map((item) => {
+            const line = item.content || "";
+            const i = item.key;
+            
+            const listMatch = line.match(/^(\s*)(\d+\.|\-|\*|[a-z]\.)\s+(.*)$/);
+            if (listMatch) {
+              const bullet = listMatch[2];
+              const content = listMatch[3];
+              return (
+                <div key={i} className={`flex gap-2 mb-2 last:mb-0 leading-relaxed text-justify ${className}`}>
+                  <span className="shrink-0 font-bold min-w-[1.8rem]">{bullet}</span>
+                  <div className="flex-1">{processBold(content)}</div>
+                </div>
+              );
+            }
+            
+            return (
+              <div key={i} className={`mb-3 last:mb-0 leading-relaxed text-justify ${className}`} 
+                    style={{ 
+                      wordBreak: 'break-word', 
+                      overflowWrap: 'break-word'
+                    }}>
+                {processBold(line)}
+              </div>
+            );
+          })}
         </div>
       );
     });
@@ -300,7 +347,7 @@ export default function App() {
           scrollY: 0,
         },
         jsPDF: { unit: 'mm', format: paperDim, orientation: 'portrait', compress: true },
-        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.header-bg'] }
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.header-bg', '.section-block'] }
       };
       
       // @ts-ignore
