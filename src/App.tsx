@@ -14,6 +14,7 @@ interface ResultData {
   desainPembelajaran: { capaian: string; tp: string; topik: string; praktikPedagogis: string; lingkungan: string };
   pengalamanBelajar: { awal: string; inti: string; penutup: string };
   asesmen: { awal: string; proses: string; akhir: string };
+  materiLengkap: string;
   lkpdIndividu: { judul: string; langkah: string };
   lkpdKelompok: { judul: string; langkah: string };
   penugasanIndividu: { judul: string; instruksi: string };
@@ -204,8 +205,9 @@ export default function App() {
         1. Gunakan Bahasa Indonesia formal yang sangat baik.
         2. LKPD Mandiri, LKPD Kelompok, dan Penugasan harus terisi dengan instruksi kerja atau butir pertanyaan yang sangat lengkap, sistematis, dan mendalam.
         3. PENTING: Untuk LKPD dan Penugasan, setiap butir instruksi/pertanyaan HARUS dipisahkan dengan baris baru (newline \\n) agar membentuk daftar yang rapi. Jangan menggabungkan beberapa nomor dalam satu paragraf.
-        4. Evaluasi: 10 Pilihan Ganda (A-D) dan 5 Essay berbobot tinggi.
-        5. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
+        4. Tambahkan bagian "materiLengkap" yang berisi ringkasan materi pembelajaran yang terstruktur, mendalam, dan sesuai EYD untuk dipelajari siswa.
+        5. Evaluasi: 10 Pilihan Ganda (A-D) dan 5 Essay berbobot tinggi.
+        6. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
         Jawab dalam format JSON murni sesuai schema.`,
         config: {
           systemInstruction: "Anda adalah Guru Ahli Kurikulum Merdeka di lingkungan SMP Muhammadiyah yang visioner. Output Anda selalu terstruktur, mendalam, dan siap pakai secara profesional.",
@@ -218,6 +220,7 @@ export default function App() {
               desainPembelajaran: { type: Type.OBJECT, properties: { capaian: { type: Type.STRING }, tp: { type: Type.STRING }, topik: { type: Type.STRING }, praktikPedagogis: { type: Type.STRING }, lingkungan: { type: Type.STRING } } },
               pengalamanBelajar: { type: Type.OBJECT, properties: { awal: { type: Type.STRING }, inti: { type: Type.STRING }, penutup: { type: Type.STRING } } },
               asesmen: { type: Type.OBJECT, properties: { awal: { type: Type.STRING }, proses: { type: Type.STRING }, akhir: { type: Type.STRING } } },
+              materiLengkap: { type: Type.STRING },
               lkpdIndividu: { type: Type.OBJECT, properties: { judul: { type: Type.STRING }, langkah: { type: Type.STRING } } },
               lkpdKelompok: { type: Type.OBJECT, properties: { judul: { type: Type.STRING }, langkah: { type: Type.STRING } } },
               penugasanIndividu: { type: Type.OBJECT, properties: { judul: { type: Type.STRING }, instruksi: { type: Type.STRING } } },
@@ -349,6 +352,7 @@ export default function App() {
   const getHeaderTitle = () => {
     switch(activeTab) {
       case 'rpp': return 'RENCANA PELAKSANAAN PEMBELAJARAN';
+      case 'materi': return 'RINGKASAN MATERI PEMBELAJARAN';
       case 'lkpd_individu': return 'LEMBAR KERJA PESERTA DIDIK (MANDIRI)';
       case 'lkpd_kelompok': return 'LEMBAR KERJA PESERTA DIDIK (KELOMPOK)';
       case 'penugasan': return 'LEMBAR PENUGASAN TERSTRUKTUR';
@@ -361,6 +365,7 @@ export default function App() {
   const getAttachmentData = () => {
     if (!result) return null;
     switch(activeTab) {
+      case 'materi': return { judul: `MATERI: ${result.desainPembelajaran.topik}`, isi: result.materiLengkap };
       case 'lkpd_individu': return { judul: result.lkpdIndividu.judul, isi: result.lkpdIndividu.langkah };
       case 'lkpd_kelompok': return { judul: result.lkpdKelompok.judul, isi: result.lkpdKelompok.langkah };
       case 'penugasan': return { judul: result.penugasanIndividu.judul, isi: result.penugasanIndividu.instruksi };
@@ -587,6 +592,7 @@ export default function App() {
           {result && !isExportingMode && (
             <div className="flex flex-wrap gap-2 justify-center bg-white p-3 rounded-2xl shadow-lg border border-slate-200 sticky top-4 z-50">
               <button onClick={() => setActiveTab('rpp')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'rpp' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Layout size={12}/> Modul Utama</button>
+              <button onClick={() => setActiveTab('materi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'materi' ? 'bg-amber-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Materi</button>
               <button onClick={() => setActiveTab('lkpd_individu')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'lkpd_individu' ? 'bg-emerald-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><User size={12}/> LKPD</button>
               <button onClick={() => setActiveTab('penugasan')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'penugasan' ? 'bg-pink-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><PenTool size={12}/> Tugas</button>
               <button onClick={() => setActiveTab('instrumen')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'instrumen' ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Rubrik</button>
