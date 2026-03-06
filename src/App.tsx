@@ -73,7 +73,7 @@ export default function App() {
 
   useEffect(() => {
     // Memuat logo default saat pertama kali aplikasi dijalankan
-    const defaultLogoUrl = 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/Logo_Muhammadiyah.png/240px-Logo_Muhammadiyah.png';
+    const defaultLogoUrl = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjQ_YzjTJk-7v72ePhBW1-3bSZJUhqGN7B-OKSz7CEBsUxPVdcRyRHz5RS_VDh1cychJlGq9QLOyfHuYj8ZFc7Xi8SmNAcWHD7C7Yuh-Qnwb-3cy0ovpqC_YwEyz6KNZza0AX3ycnpuyrg00NPicg9PuKCiw8aeRYVF8pV4K9y8Qec7BooRX8eDqo6hUg/s1600/LOGOMU.png';
     
     const loadDefaultLogo = () => {
       const img = new Image();
@@ -291,7 +291,7 @@ export default function App() {
           scrollY: 0,
         },
         jsPDF: { unit: 'mm', format: paperDim, orientation: 'portrait', compress: true },
-        pagebreak: { mode: ['css', 'legacy'], avoid: ['table', 'tr', '.section-block', '.header-bg'] }
+        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.header-bg'] }
       };
       
       // @ts-ignore
@@ -392,12 +392,14 @@ export default function App() {
     </table>
   );
 
-  const InstitutionalKop = () => (
-    <div style={{ width: '100%', marginBottom: '15pt', boxSizing: 'border-box', position: 'relative', pageBreakInside: 'avoid' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100px' }}>
-        <div style={{ position: 'absolute', left: '0', top: '0' }}>
-          {logoBase64 && <img src={logoBase64} alt="Logo" style={{ width: '85px', height: '85px', objectFit: 'contain' }} crossOrigin="anonymous" />}
-        </div>
+  const InstitutionalKop = () => {
+    const sampleLogo = 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjQ_YzjTJk-7v72ePhBW1-3bSZJUhqGN7B-OKSz7CEBsUxPVdcRyRHz5RS_VDh1cychJlGq9QLOyfHuYj8ZFc7Xi8SmNAcWHD7C7Yuh-Qnwb-3cy0ovpqC_YwEyz6KNZza0AX3ycnpuyrg00NPicg9PuKCiw8aeRYVF8pV4K9y8Qec7BooRX8eDqo6hUg/s1600/LOGOMU.png';
+    return (
+      <div style={{ width: '100%', marginBottom: '15pt', boxSizing: 'border-box', position: 'relative', pageBreakInside: 'avoid' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100px' }}>
+          <div style={{ position: 'absolute', left: '0', top: '0' }}>
+            <img src={logoBase64 || sampleLogo} alt="Logo" style={{ width: '85px', height: '85px', objectFit: 'contain' }} crossOrigin="anonymous" />
+          </div>
         
         <div style={{ textAlign: 'center', width: '100%', paddingLeft: '85px', paddingRight: '20px', boxSizing: 'border-box' }}>
           <p style={{ margin: '0', fontSize: '10pt', fontWeight: 'bold' }}>MAJELIS PENDIDIKAN DASAR MENENGAH DAN PENDIDIKAN NON FORMAL</p>
@@ -413,6 +415,7 @@ export default function App() {
       <div style={{ borderTop: '0.5pt solid black', marginTop: '2pt', width: '100%', marginBottom: '10pt', boxSizing: 'border-box' }}></div>
     </div>
   );
+};
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-100 font-sans text-slate-900 selection:bg-blue-100">
@@ -458,11 +461,12 @@ export default function App() {
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-3 p-2 bg-white border rounded-lg shadow-sm">
                           <div className="w-12 h-12 border rounded bg-slate-50 flex items-center justify-center overflow-hidden p-1 flex-shrink-0">
-                            {logoBase64 ? (
-                              <img src={logoBase64} alt="Preview" className="w-full h-full object-contain" crossOrigin="anonymous" />
-                            ) : (
-                              <ImageIcon size={20} className="text-slate-300" />
-                            )}
+                            <img 
+                              src={logoBase64 || 'https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjQ_YzjTJk-7v72ePhBW1-3bSZJUhqGN7B-OKSz7CEBsUxPVdcRyRHz5RS_VDh1cychJlGq9QLOyfHuYj8ZFc7Xi8SmNAcWHD7C7Yuh-Qnwb-3cy0ovpqC_YwEyz6KNZza0AX3ycnpuyrg00NPicg9PuKCiw8aeRYVF8pV4K9y8Qec7BooRX8eDqo6hUg/s1600/LOGOMU.png'} 
+                              alt="Preview" 
+                              className="w-full h-full object-contain" 
+                              crossOrigin="anonymous" 
+                            />
                           </div>
                           <div className="flex-grow">
                             <input 
@@ -807,9 +811,11 @@ export default function App() {
                 <div style={{ width: '100%', boxSizing: 'border-box' }}>
                   {/* Forced margin 1cm top for evaluations */}
                   <div className="section-block" style={{ paddingTop: isExportingMode ? '10mm' : '0' }}>
-                    <table border={1} className="w-full border-collapse border border-black mb-4" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
-                        <tbody><tr className="header-bg" style={{ backgroundColor: '#b4c7e7' }}><td className="p-3 font-bold text-center uppercase text-[12px]" style={{ border: '1pt solid black' }}>{getHeaderTitle()}</td></tr></tbody>
-                    </table>
+                    {activeTab !== 'materi' && (
+                      <table border={1} className="w-full border-collapse border border-black mb-4" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                          <tbody><tr className="header-bg" style={{ backgroundColor: '#b4c7e7' }}><td className="p-3 font-bold text-center uppercase text-[12px]" style={{ border: '1pt solid black' }}>{getHeaderTitle()}</td></tr></tbody>
+                      </table>
+                    )}
                   </div>
                   
                   {activeTab === 'evaluasi' ? (
@@ -866,7 +872,7 @@ export default function App() {
                             {getAttachmentData()?.judul || getHeaderTitle()}
                           </h2>
                         </div>
-                        <div className="border border-black p-8 min-h-[500px]" style={{ border: '1.5pt solid black', boxSizing: 'border-box' }}>
+                        <div className={activeTab === 'materi' ? "p-2" : "border border-black p-8 min-h-[500px]"} style={activeTab === 'materi' ? { boxSizing: 'border-box' } : { border: '1.5pt solid black', boxSizing: 'border-box' }}>
                           {activeTab === 'instrumen' ? (
                             <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                               <thead>
