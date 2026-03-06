@@ -211,6 +211,15 @@ export default function App() {
         3. LKPD Mandiri, LKPD Kelompok, dan Penugasan harus terisi dengan instruksi kerja atau butir pertanyaan yang sangat lengkap, sistematis, dan mendalam.
         4. PENTING: Untuk LKPD dan Penugasan, setiap butir instruksi/pertanyaan HARUS dipisahkan dengan baris baru (newline \\n) agar membentuk daftar yang rapi. Jangan menggabungkan beberapa nomor dalam satu paragraf.
         5. Tambahkan bagian "materiLengkap" yang berisi penjelasan konsep secara runtut, komunikatif, dan mendalam. Materi WAJIB dipecah menjadi beberapa sub-bab yang sistematis. Gunakan format paragraf standar dengan spasi antar paragraf yang jelas (gunakan double newline \\n\\n untuk antar paragraf).
+        ${(displaySubject.toLowerCase().includes('al-islam') || displaySubject.toLowerCase().includes('agama islam')) ? 
+          `KHUSUS untuk mata pelajaran ${displaySubject}, struktur "materiLengkap" HARUS mencakup: 
+          - Pengertian
+          - Dalil (Wajib mencakup ayat Al-Qur'an dan Hadits yang relevan, sertakan teks Arab asli beserta terjemahannya)
+          - Hukum (jika ada kaitannya dengan materi)
+          - Hikmah.
+          Pastikan setiap sub-bab ini diisi secara lengkap, mendalam, dan bebas dari kesalahan pengetikan (typo).` : 
+          `Untuk mata pelajaran ${displaySubject}, sesuaikan struktur "materiLengkap" agar mencakup konsep-konsep kunci secara lengkap, sistematis, mendalam, dan bebas dari kesalahan pengetikan (typo).`
+        }
         6. Evaluasi: 10 Pilihan Ganda (A-D) dan 5 Essay berbobot tinggi.
         7. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
         Jawab dalam format JSON murni sesuai schema.`,
