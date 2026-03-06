@@ -200,14 +200,15 @@ export default function App() {
     try {
       const response = await ai.models.generateContent({
         model: MODEL_NAME,
-        contents: `Buat RPP MENDALAM Profesional Kurikulum Merdeka Fase D (SMP) materi: "${topic}" Mata Pelajaran: ${displaySubject}. 
+        contents: `Buat RPP MENDALAM Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, materi: "${topic}", Mata Pelajaran: ${displaySubject}. 
         WAJIB:
         1. Gunakan Bahasa Indonesia formal yang sangat baik.
-        2. LKPD Mandiri, LKPD Kelompok, dan Penugasan harus terisi dengan instruksi kerja atau butir pertanyaan yang sangat lengkap, sistematis, dan mendalam.
-        3. PENTING: Untuk LKPD dan Penugasan, setiap butir instruksi/pertanyaan HARUS dipisahkan dengan baris baru (newline \\n) agar membentuk daftar yang rapi. Jangan menggabungkan beberapa nomor dalam satu paragraf.
-        4. Tambahkan bagian "materiLengkap" yang berisi ringkasan materi pembelajaran yang terstruktur, mendalam, dan sesuai EYD untuk dipelajari siswa.
-        5. Evaluasi: 10 Pilihan Ganda (A-D) dan 5 Essay berbobot tinggi.
-        6. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
+        2. Pastikan bagian "Target Peserta Didik" (identifikasi.pesertaDidik) secara eksplisit menyebutkan "${kelas}".
+        3. LKPD Mandiri, LKPD Kelompok, dan Penugasan harus terisi dengan instruksi kerja atau butir pertanyaan yang sangat lengkap, sistematis, dan mendalam.
+        4. PENTING: Untuk LKPD dan Penugasan, setiap butir instruksi/pertanyaan HARUS dipisahkan dengan baris baru (newline \\n) agar membentuk daftar yang rapi. Jangan menggabungkan beberapa nomor dalam satu paragraf.
+        5. Tambahkan bagian "materiLengkap" yang berisi ringkasan materi pembelajaran yang terstruktur, mendalam, dan sesuai EYD untuk dipelajari siswa.
+        6. Evaluasi: 10 Pilihan Ganda (A-D) dan 5 Essay berbobot tinggi.
+        7. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
         Jawab dalam format JSON murni sesuai schema.`,
         config: {
           systemInstruction: "Anda adalah Guru Ahli Kurikulum Merdeka di lingkungan SMP Muhammadiyah yang visioner. Output Anda selalu terstruktur, mendalam, dan siap pakai secara profesional.",
