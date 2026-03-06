@@ -228,6 +228,11 @@ export default function App() {
     });
   };
 
+  const handleDownloadDefaultLogo = () => {
+    const logoUrl = 'https://drive.google.com/file/d/1VvSuJzYatiDrM5-j0yNIDmUjvAGCHGuH/view?usp=sharing';
+    window.open(logoUrl, '_blank');
+  };
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -247,7 +252,7 @@ export default function App() {
     
     const apiKeyToUse = userApiKey || process.env.GEMINI_API_KEY || "";
     if (!apiKeyToUse) {
-      setError("API Key tidak ditemukan. Silakan masukkan API Key Gemini di panel pengaturan.");
+      setError("Kode aplikasi tidak ditemukan. Silakan masukkan kode pembelian anda di panel pengaturan.");
       setIsLoading(false);
       return;
     }
@@ -544,6 +549,13 @@ export default function App() {
                             >
                               <Upload size={14} /> Ganti Logo
                             </label>
+                            <button 
+                              onClick={handleDownloadDefaultLogo}
+                              className="ml-2 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-md text-[11px] font-bold hover:bg-emerald-100 cursor-pointer transition-all border border-emerald-100"
+                              title="Download Logo Muhammadiyah"
+                            >
+                              <Download size={14} /> Download Logo
+                            </button>
                             {logoBase64 && (
                               <button 
                                 onClick={() => setLogoBase64(null)}
@@ -628,23 +640,23 @@ export default function App() {
                         onClick={() => setShowApiKeyInput(!showApiKeyInput)}
                         className="text-[10px] font-bold text-slate-400 flex items-center gap-1 hover:text-blue-600 transition-all"
                       >
-                        <Settings2 size={12} /> {showApiKeyInput ? 'Sembunyikan Pengaturan API' : 'Pengaturan API Gemini (Opsional)'}
+                        <Settings2 size={12} /> {showApiKeyInput ? 'Sembunyikan Pengaturan' : 'Pengaturan'}
                       </button>
                       
                       {showApiKeyInput && (
                         <div className="mt-2 p-3 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
-                          <label className="text-[10px] font-bold text-blue-600 uppercase block">Gemini API Key</label>
+                          <label className="text-[10px] font-bold text-blue-600 uppercase block">KODE APLIKASI</label>
                           <div className="flex gap-2">
                             <input 
                               type="password" 
                               value={userApiKey} 
                               onChange={e => saveApiKey(e.target.value)}
-                              placeholder="Masukkan API Key Anda..." 
+                              placeholder="Masukkan KODE Pembelian Anda..." 
                               className="flex-1 p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                             />
                           </div>
                           <p className="text-[9px] text-slate-500 leading-tight">
-                            * API Key disimpan secara lokal di browser Anda. Gunakan jika aplikasi tidak berjalan di Vercel atau ingin menggunakan kuota pribadi.
+                            *Kode disimpan secara lokal di browser Anda. Pastikan anda menyimpan secara  pribadi, untuk digunakan pada browser yang berbeda.
                           </p>
                         </div>
                       )}
