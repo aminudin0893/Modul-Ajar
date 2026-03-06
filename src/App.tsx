@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, Loader2, Download, Settings2, Image as ImageIcon, 
   MapPin, Calendar, School, UserCheck, AlertTriangle, RefreshCw,
-  Maximize2, FileText, Layout, Users, User, ClipboardList, PenTool, FileType, Eye, EyeOff,
+  Maximize2, FileText, Layout, Users, User, ClipboardList, PenTool, FileType, Eye, EyeOff, Copy,
   CheckCircle2, Printer, Upload
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -60,6 +60,7 @@ export default function App() {
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [userApiKey, setUserApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   useEffect(() => {
     const savedKey = localStorage.getItem('gemini_api_key');
@@ -491,7 +492,11 @@ export default function App() {
           
           {/* HEADER BRANDING */}
           {!isExportingMode && (
-            <div className="flex items-center justify-between bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
+            <div className="relative flex items-center justify-between bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
+               {/* UPDATE INDICATOR */}
+               <div className="absolute top-2 right-4 text-[9px] font-black text-slate-300 uppercase tracking-tighter">
+                 Update 06.03.26
+               </div>
                <div className="flex items-center gap-3">
                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md border border-slate-100 overflow-hidden p-1">
                     {logoBase64 ? (
@@ -647,13 +652,34 @@ export default function App() {
                         <div className="mt-2 p-3 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
                           <label className="text-[10px] font-bold text-blue-600 uppercase block">KODE APLIKASI</label>
                           <div className="flex gap-2">
-                            <input 
-                              type="password" 
-                              value={userApiKey} 
-                              onChange={e => saveApiKey(e.target.value)}
-                              placeholder="Masukkan KODE Pembelian Anda..." 
-                              className="flex-1 p-2 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                            />
+                            <div className="relative flex-1">
+                              <input 
+                                type={showApiKey ? "text" : "password"} 
+                                value={userApiKey} 
+                                onChange={e => saveApiKey(e.target.value)}
+                                placeholder="Masukkan KODE Pembelian Anda..." 
+                                className="w-full p-2 pr-16 text-xs border rounded bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                              />
+                              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                <button 
+                                  onClick={() => setShowApiKey(!showApiKey)}
+                                  className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                                  title={showApiKey ? "Sembunyikan" : "Lihat"}
+                                >
+                                  {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(userApiKey);
+                                    alert("Kode berhasil disalin!");
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                                  title="Salin Kode"
+                                >
+                                  <Copy size={14} />
+                                </button>
+                              </div>
+                            </div>
                           </div>
                           <p className="text-[9px] text-slate-500 leading-tight">
                             *Kode disimpan secara lokal di browser Anda. Pastikan anda menyimpan secara  pribadi, untuk digunakan pada browser yang berbeda.
