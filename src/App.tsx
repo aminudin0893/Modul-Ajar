@@ -513,7 +513,7 @@ export default function App() {
                     )}
                  </div>
                  <div>
-                   <h1 className="text-xl font-black text-slate-800 tracking-tight">MODUL WAKA AIK SMPMUSAPRO</h1>
+                   <h1 className="text-xl font-black text-slate-800 tracking-tight">WAKA AIK SMPMUSAPRO</h1>
                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SMP MUHAMMADIYAH 1 PROBOLINGGO</p>
                  </div>
                </div>
