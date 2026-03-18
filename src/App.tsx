@@ -3,7 +3,8 @@ import {
   Sparkles, Loader2, Download, Settings2, Image as ImageIcon, 
   MapPin, Calendar, School, UserCheck, AlertTriangle, RefreshCw,
   Maximize2, FileText, Layout, Users, User, ClipboardList, PenTool, FileType, Eye, EyeOff, Copy,
-  CheckCircle2, Printer, Upload
+  CheckCircle2, Printer, Upload, Trash2, MessageSquare, Plus, Minus,
+  Send, Smile, Paperclip
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -22,6 +23,13 @@ interface ResultData {
   evaluasi: {
     pilgan: Array<{ soal: string; a: string; b: string; c: string; d: string; kunci: string }>;
     essay: Array<{ soal: string; kunci: string }>;
+  };
+  kisiKisi: Array<{ no: number; materi: string; indikator: string; level: string; bentukSoal: string }>;
+  prota: Array<{ semester: string; materi: string; alokasiWaktu: string }>;
+  prosem: Array<{ materi: string; alokasiWaktu: string; jadwal: string[] }>;
+  tekaTekiSilang: {
+    mendatar: Array<{ nomor: number; pertanyaan: string; jawaban: string }>;
+    menurun: Array<{ nomor: number; pertanyaan: string; jawaban: string }>;
   };
 }
 
@@ -61,6 +69,18 @@ export default function App() {
   const [userApiKey, setUserApiKey] = useState('');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [ttsMode, setTtsMode] = useState('full'); // 'full' or 'horizontal'
+  const [numPilgan, setNumPilgan] = useState(10);
+  const [numEssay, setNumEssay] = useState(5);
+  const [mainTab, setMainTab] = useState('modul'); // 'modul', 'prota', 'prosem', 'konsultasi'
+  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'model'; text: string }>>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [protaList, setProtaList] = useState('');
+  const [prosemList, setProsemList] = useState('');
+  const [soalMaterials, setSoalMaterials] = useState<Array<{ topic: string; level: 'Mudah' | 'Menengah' | 'HOTS' }>>([{ topic: '', level: 'Menengah' }]);
+  const [examTitle, setExamTitle] = useState('ASESMEN SUMATIF');
+  const [noEssayMode, setNoEssayMode] = useState(false);
 
   useEffect(() => {
     const savedKey = localStorage.getItem('gemini_api_key');
@@ -108,6 +128,13 @@ export default function App() {
 
   const displaySubject = isCustomSubject ? customSubject : subject;
   const exportAreaRef = useRef<HTMLDivElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, isChatLoading]);
 
   useEffect(() => {
     const scripts = [
@@ -238,6 +265,47 @@ export default function App() {
     });
   };
 
+  const handleChat = async () => {
+    if (!chatInput.trim() || isChatLoading) return;
+    
+    const userMsg = chatInput.trim();
+    setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setChatInput('');
+    setIsChatLoading(true);
+
+    const apiKeyToUse = userApiKey || process.env.GEMINI_API_KEY || "";
+    if (!apiKeyToUse) {
+      setChatMessages(prev => [...prev, { role: 'model', text: "Maaf, kode aplikasi tidak ditemukan. Silakan masukkan kode di pengaturan." }]);
+      setIsChatLoading(false);
+      return;
+    }
+
+    const ai = new GoogleGenAI({ apiKey: apiKeyToUse });
+
+    try {
+      const response = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: [
+          { role: 'user', parts: [{ text: `Anda adalah asisten ahli administrasi guru dan pendidikan yang profesional. Jawablah pertanyaan berikut dengan sangat bijak, mendalam, dan sesuai dengan regulasi pendidikan terbaru di Indonesia (Kurikulum Merdeka). 
+          Gunakan tata bahasa Indonesia yang baik dan benar sesuai EYD. 
+          Gunakan pemformatan yang rapi (gunakan poin-poin atau penomoran jika perlu) agar mudah dibaca.
+          Pertanyaan: ${userMsg}` }] }
+        ],
+        config: {
+          systemInstruction: "Anda adalah konsultan pendidikan profesional untuk guru SMP Muhammadiyah. Anda memberikan saran yang praktis, religius (AIK), dan sesuai standar akademik tinggi. Pastikan jawaban Anda rapi, profesional, dan mudah dipahami.",
+        }
+      });
+
+      const reply = response.text || "Maaf, saya tidak dapat memberikan jawaban saat ini.";
+      setChatMessages(prev => [...prev, { role: 'model', text: reply }]);
+    } catch (err) {
+      console.error("Chat Error:", err);
+      setChatMessages(prev => [...prev, { role: 'model', text: "Terjadi kesalahan saat menghubungi asisten. Mohon coba lagi." }]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
   const handleDownloadDefaultLogo = () => {
     const logoUrl = 'https://drive.google.com/file/d/1VvSuJzYatiDrM5-j0yNIDmUjvAGCHGuH/view?usp=sharing';
     window.open(logoUrl, '_blank');
@@ -256,7 +324,17 @@ export default function App() {
 
   const handleGenerate = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!topic.trim()) { setError('Mohon masukkan judul materi.'); return; }
+    
+    const currentTopic = mainTab === 'modul' ? topic : mainTab === 'prota' ? protaList : mainTab === 'prosem' ? prosemList : examTitle;
+    if (!currentTopic.trim()) { 
+      setError(mainTab === 'modul' ? 'Mohon masukkan judul materi.' : mainTab === 'soal' ? 'Mohon masukkan judul soal/ujian.' : 'Mohon masukkan daftar materi.'); 
+      return; 
+    }
+    if (mainTab === 'soal' && soalMaterials.some(m => !m.topic.trim())) {
+      setError('Mohon lengkapi semua judul materi soal.');
+      return;
+    }
+
     setIsLoading(true); 
     setError('');
     
@@ -269,10 +347,9 @@ export default function App() {
 
     const ai = new GoogleGenAI({ apiKey: apiKeyToUse });
 
-    try {
-      const response = await ai.models.generateContent({
-        model: MODEL_NAME,
-        contents: `Buat RPP MENDALAM Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, materi: "${topic}", Mata Pelajaran: ${displaySubject}. 
+    let prompt = "";
+    if (mainTab === 'modul') {
+      prompt = `Buat RPP MENDALAM Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, materi: "${topic}", Mata Pelajaran: ${displaySubject}. 
         WAJIB:
         1. Gunakan Bahasa Indonesia formal yang sangat baik.
         2. Pastikan bagian "Target Peserta Didik" (identifikasi.pesertaDidik) secara eksplisit menyebutkan "${kelas}".
@@ -288,9 +365,52 @@ export default function App() {
           Pastikan setiap sub-bab ini diisi secara lengkap, mendalam, dan bebas dari kesalahan pengetikan (typo).` : 
           `Untuk mata pelajaran ${displaySubject}, sesuaikan struktur "materiLengkap" agar mencakup konsep-konsep kunci secara lengkap, sistematis, mendalam, dan bebas dari kesalahan pengetikan (typo).`
         }
-        6. Evaluasi: 10 Pilihan Ganda (A-D) dan 5 Essay berbobot tinggi.
-        7. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
-        Jawab dalam format JSON murni sesuai schema.`,
+        6. Evaluasi: ${numPilgan} Pilihan Ganda (A-D) dan ${numEssay} Essay berbobot tinggi.
+        7. Kisi-kisi Soal: Buat tabel kisi-kisi soal yang mencakup nomor, materi, indikator soal, level kognitif (L1/L2/L3), dan bentuk soal.
+        8. Program Tahunan (Prota): Buat rencana program tahunan yang mencakup semester, materi pokok, dan alokasi waktu.
+        9. Program Semester (Prosem): Buat rencana program semester yang mencakup materi pokok, alokasi waktu, dan jadwal bulanan (6 bulan per semester).
+        10. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
+        11. Tambahkan bagian "tekaTekiSilang" yang berisi ${ttsMode === 'full' ? 'minimal 5 pertanyaan mendatar dan 5 pertanyaan menurun' : 'minimal 10 pertanyaan mendatar saja (kosongkan bagian menurun)'} yang relevan dengan materi.
+        Jawab dalam format JSON murni sesuai schema.`;
+    } else if (mainTab === 'prota') {
+      prompt = `Buat PROGRAM TAHUNAN (PROTA) Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, Mata Pelajaran: ${displaySubject}.
+        Daftar Materi Pokok yang diinginkan:
+        ${protaList}
+        
+        WAJIB:
+        1. Gunakan Bahasa Indonesia formal (EYD) yang sangat baik.
+        2. Susun materi tersebut ke dalam Semester Ganjil dan Genap secara logis.
+        3. Tentukan Alokasi Waktu (JP) yang realistis untuk setiap materi.
+        4. Jawab dalam format JSON murni sesuai schema (hanya isi bagian prota, yang lain bisa dikosongkan atau dummy).`;
+    } else if (mainTab === 'soal') {
+      const materiList = soalMaterials.map(m => `- ${m.topic} (Level: ${m.level})`).join('\n');
+      prompt = `Buat SOAL UJIAN / ASESMEN Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, Mata Pelajaran: ${displaySubject}.
+        Judul Ujian: ${examTitle}
+        Daftar Materi & Tingkat Kesulitan:
+        ${materiList}
+        
+        WAJIB:
+        1. Gunakan Bahasa Indonesia formal (EYD) yang sangat baik.
+        2. Buat ${numPilgan} soal Pilihan Ganda (A-D) yang berkualitas tinggi sesuai tingkat kesulitan yang diminta.
+        3. ${noEssayMode ? 'JANGAN buat soal Essay.' : `Buat ${numEssay} soal Essay yang mendalam.`}
+        4. Buat tabel KISI-KISI SOAL yang lengkap mencakup nomor, materi, indikator soal, level kognitif (L1/L2/L3), dan bentuk soal.
+        5. Jawab dalam format JSON murni sesuai schema (hanya isi bagian evaluasi dan kisiKisi, yang lain bisa dikosongkan atau dummy).`;
+    } else {
+      prompt = `Buat PROGRAM SEMESTER (PROSEM) Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, Semester: ${semester}, Mata Pelajaran: ${displaySubject}.
+        Daftar Materi Pokok yang diinginkan:
+        ${prosemList}
+        
+        WAJIB:
+        1. Gunakan Bahasa Indonesia formal (EYD) yang sangat baik.
+        2. Tentukan Alokasi Waktu (JP) yang realistis untuk setiap materi.
+        3. Buat jadwal distribusi bulanan (6 bulan) dengan menandai minggu efektif (gunakan tanda 'X' atau 'V' dalam array jadwal).
+        4. Jawab dalam format JSON murni sesuai schema (hanya isi bagian prosem, yang lain bisa dikosongkan atau dummy).`;
+    }
+
+    try {
+      const response = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: prompt,
         config: {
           systemInstruction: "Anda adalah Guru Ahli Kurikulum Merdeka di lingkungan SMP Muhammadiyah yang visioner. Output Anda selalu terstruktur, mendalam, dan siap pakai secara profesional.",
           responseMimeType: "application/json",
@@ -319,16 +439,73 @@ export default function App() {
                     items: { type: Type.OBJECT, properties: { soal: { type: Type.STRING }, kunci: { type: Type.STRING } } }
                   }
                 }
+              },
+              kisiKisi: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    no: { type: Type.NUMBER },
+                    materi: { type: Type.STRING },
+                    indikator: { type: Type.STRING },
+                    level: { type: Type.STRING },
+                    bentukSoal: { type: Type.STRING }
+                  }
+                }
+              },
+              prota: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    semester: { type: Type.STRING },
+                    materi: { type: Type.STRING },
+                    alokasiWaktu: { type: Type.STRING }
+                  }
+                }
+              },
+              prosem: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    materi: { type: Type.STRING },
+                    alokasiWaktu: { type: Type.STRING },
+                    jadwal: { type: Type.ARRAY, items: { type: Type.STRING } }
+                  }
+                }
+              },
+              tekaTekiSilang: {
+                type: Type.OBJECT,
+                properties: {
+                  mendatar: {
+                    type: Type.ARRAY,
+                    items: { type: Type.OBJECT, properties: { nomor: { type: Type.NUMBER }, pertanyaan: { type: Type.STRING }, jawaban: { type: Type.STRING } } }
+                  },
+                  menurun: {
+                    type: Type.ARRAY,
+                    items: { type: Type.OBJECT, properties: { nomor: { type: Type.NUMBER }, pertanyaan: { type: Type.STRING }, jawaban: { type: Type.STRING } } }
+                  }
+                }
               }
             },
-            required: ["identifikasi", "kurikulumCinta", "desainPembelajaran", "pengalamanBelajar", "asesmen", "materiLengkap", "lkpdIndividu", "lkpdKelompok", "penugasanIndividu", "rubrikPenilaian", "evaluasi"]
+            required: ["identifikasi", "kurikulumCinta", "desainPembelajaran", "pengalamanBelajar", "asesmen", "materiLengkap", "lkpdIndividu", "lkpdKelompok", "penugasanIndividu", "rubrikPenilaian", "evaluasi", "kisiKisi", "prota", "prosem", "tekaTekiSilang"]
           }
         }
       });
 
       if (response.text) {
-        setResult(JSON.parse(response.text));
-        setActiveTab('rpp'); 
+        const data = JSON.parse(response.text);
+        setResult(data);
+        if (mainTab === 'soal') {
+          setActiveTab('evaluasi');
+        } else if (mainTab === 'prota') {
+          setActiveTab('prota');
+        } else if (mainTab === 'prosem') {
+          setActiveTab('prosem');
+        } else {
+          setActiveTab('rpp');
+        }
       }
     } catch (err) {
       setError("Gagal membuat materi. Pastikan koneksi internet stabil dan coba lagi.");
@@ -344,6 +521,7 @@ export default function App() {
     setIsExportingMode(true);
     
     const paperDim = paperFormat === 'a4' ? 'a4' : [210, 330];
+    const baseName = mainTab === 'soal' ? examTitle : topic;
     
     setTimeout(() => {
       const element = exportAreaRef.current;
@@ -351,7 +529,7 @@ export default function App() {
       
       const opt = {
         margin: [10, 10, 10, 10], // Margin 1cm keliling
-        filename: `MODUL_${activeTab.toUpperCase()}_${topic.replace(/\s+/g, '_')}.pdf`,
+        filename: `${mainTab.toUpperCase()}_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
           scale: 3, 
@@ -409,7 +587,8 @@ export default function App() {
         }
       }).then(canvas => {
         const link = document.createElement('a');
-        link.download = `IMG_${activeTab.toUpperCase()}_${topic.replace(/\s+/g, '_')}.jpg`;
+        const baseName = mainTab === 'soal' ? examTitle : topic;
+        link.download = `IMG_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.jpg`;
         link.href = canvas.toDataURL("image/jpeg", 0.95);
         link.click();
         setIsExportingMode(false);
@@ -419,7 +598,8 @@ export default function App() {
 
   const exportToWord = (ext: string) => {
     if (!result || !exportAreaRef.current) return;
-    const fileName = `RPP_${activeTab.toUpperCase()}_${topic.replace(/\s+/g, '_')}.${ext}`;
+    const baseName = mainTab === 'soal' ? examTitle : topic;
+    const fileName = `${mainTab.toUpperCase()}_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.${ext}`;
     const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>@page { margin: 2.0cm; } body { font-family: 'Times New Roman', serif; font-size: 11pt; } table { border-collapse: collapse; width: 100%; border: 1pt solid black; } th, td { border: 1pt solid black; padding: 8pt; vertical-align: top; } .header-bg { background-color: #b4c7e7; text-align: center; font-weight: bold; }</style></head><body>`;
     const footer = "</body></html>";
     const contentHtml = exportAreaRef.current.innerHTML;
@@ -430,6 +610,7 @@ export default function App() {
   };
 
   const getHeaderTitle = () => {
+    if (mainTab === 'soal' && activeTab === 'evaluasi') return examTitle.toUpperCase();
     switch(activeTab) {
       case 'rpp': return 'RENCANA PELAKSANAAN PEMBELAJARAN';
       case 'materi': return 'RINGKASAN MATERI PEMBELAJARAN';
@@ -438,6 +619,10 @@ export default function App() {
       case 'penugasan': return 'LEMBAR PENUGASAN TERSTRUKTUR';
       case 'instrumen': return 'RUBRIK KRITERIA & INSTRUMEN PENILAIAN';
       case 'evaluasi': return 'LEMBAR EVALUASI PEMBELAJARAN';
+      case 'kisi_kisi': return 'KISI-KISI SOAL EVALUASI';
+      case 'prota': return 'PROGRAM TAHUNAN (PROTA)';
+      case 'prosem': return 'PROGRAM SEMESTER (PROSEM)';
+      case 'tts': return 'TEKA-TEKI SILANG (TTS) MATERI';
       default: return 'RENCANA PELAKSANAAN PEMBELAJARAN';
     }
   };
@@ -449,6 +634,7 @@ export default function App() {
       case 'lkpd_individu': return { judul: result.lkpdIndividu.judul, isi: result.lkpdIndividu.langkah };
       case 'lkpd_kelompok': return { judul: result.lkpdKelompok.judul, isi: result.lkpdKelompok.langkah };
       case 'penugasan': return { judul: result.penugasanIndividu.judul, isi: result.penugasanIndividu.instruksi };
+      case 'tts': return { judul: `TTS: ${result.desainPembelajaran.topik}`, isi: "" };
       default: return null;
     }
   };
@@ -499,33 +685,155 @@ export default function App() {
           
           {/* HEADER BRANDING */}
           {!isExportingMode && (
-            <div className="relative flex items-center justify-between bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
-               {/* UPDATE INDICATOR */}
-               <div className="absolute top-2 right-4 text-[9px] font-black text-slate-300 uppercase tracking-tighter">
-                 Update 06.03.26
-               </div>
-               <div className="flex items-center gap-3">
-                 <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md border border-slate-100 overflow-hidden p-1">
+            <div className="space-y-4">
+              <div className="relative flex items-center justify-between bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
+                 {/* UPDATE INDICATOR */}
+                 <div className="absolute top-2 right-4 text-[9px] font-black text-slate-300 uppercase tracking-tighter">
+                   Update 06.03.26
+                 </div>
+                 <div className="flex items-center gap-3">
+                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md border border-slate-100 overflow-hidden p-1">
+                      {logoBase64 ? (
+                        <img src={logoBase64} alt="Logo" className="w-full h-full object-contain" crossOrigin="anonymous" />
+                      ) : (
+                        <School size={24} className="text-slate-300" />
+                      )}
+                   </div>
+                   <div>
+                     <h1 className="text-xl font-black text-slate-800 tracking-tight">WAKA AIK SMPMUSAPRO</h1>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SMP MUHAMMADIYAH 1 PROBOLINGGO</p>
+                   </div>
+                 </div>
+                 <div className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-500">
+                    <div className="flex items-center gap-1"><CheckCircle2 size={14} className="text-emerald-500" /> Kurikulum Merdeka</div>
+                    <div className="flex items-center gap-1"><CheckCircle2 size={14} className="text-emerald-500" /> KBC Integrated</div>
+                 </div>
+              </div>
+
+              {/* MAIN NAVIGATION */}
+              <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar">
+                <button onClick={() => { setMainTab('modul'); setActiveTab('rpp'); }} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'modul' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Layout size={16}/> Buat Modul</button>
+                <button onClick={() => { setMainTab('prota'); setActiveTab('prota'); }} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prota' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Calendar size={16}/> Prota</button>
+                <button onClick={() => { setMainTab('prosem'); setActiveTab('prosem'); }} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prosem' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><RefreshCw size={16}/> Prosem</button>
+                <button onClick={() => { setMainTab('soal'); setActiveTab('evaluasi'); }} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'soal' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><ClipboardList size={16}/> Generate Soal</button>
+                <button onClick={() => setMainTab('konsultasi')} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'konsultasi' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Sparkles size={16}/> Konsultasi</button>
+              </div>
+            </div>
+          )}
+
+          {/* KONSULTASI CHAT INTERFACE */}
+          {mainTab === 'konsultasi' && !isExportingMode && (
+            <div className="bg-[#E5DDD5] rounded-2xl shadow-xl border border-slate-200 flex flex-col h-[650px] overflow-hidden relative">
+              {/* WhatsApp Header */}
+              <div className="bg-[#075E54] p-3 text-white flex items-center justify-between shadow-md z-10">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center overflow-hidden border border-white/20">
                     {logoBase64 ? (
-                      <img src={logoBase64} alt="Logo" className="w-full h-full object-contain" crossOrigin="anonymous" />
+                      <img src={logoBase64} alt="Avatar" className="w-full h-full object-contain" />
                     ) : (
-                      <School size={24} className="text-slate-300" />
+                      <School size={20} className="text-slate-400" />
                     )}
-                 </div>
-                 <div>
-                   <h1 className="text-xl font-black text-slate-800 tracking-tight">WAKA AIK SMPMUSAPRO</h1>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SMP MUHAMMADIYAH 1 PROBOLINGGO</p>
-                 </div>
-               </div>
-               <div className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-500">
-                  <div className="flex items-center gap-1"><CheckCircle2 size={14} className="text-emerald-500" /> Kurikulum Merdeka</div>
-                  <div className="flex items-center gap-1"><CheckCircle2 size={14} className="text-emerald-500" /> KBC Integrated</div>
-               </div>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm leading-tight">WAKA AIK (Konsultasi)</h3>
+                    <p className="text-[10px] text-emerald-100 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span> Online
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button 
+                    onClick={() => setChatMessages([])}
+                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white"
+                    title="Bersihkan Chat"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Chat Area */}
+              <div className="flex-grow overflow-y-auto p-4 space-y-3">
+                {chatMessages.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+                    <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-white max-w-xs">
+                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Enkripsi End-to-End</p>
+                      <p className="text-xs text-slate-600 leading-relaxed">Pesan dalam chat ini dilindungi secara profesional. Tanyakan apa saja seputar Kurikulum Merdeka atau AIK.</p>
+                    </div>
+                  </div>
+                )}
+                
+                {chatMessages.map((msg, idx) => (
+                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`relative max-w-[85%] px-3 py-2 rounded-lg text-sm shadow-sm ${
+                      msg.role === 'user' 
+                        ? 'bg-[#DCF8C6] text-slate-800 rounded-tr-none' 
+                        : 'bg-white text-slate-800 rounded-tl-none'
+                    }`}>
+                      {/* Tail for bubbles */}
+                      <div className={`absolute top-0 w-2 h-2 ${
+                        msg.role === 'user' 
+                          ? '-right-2 bg-[#DCF8C6] [clip-path:polygon(0_0,0_100%,100%_0)]' 
+                          : '-left-2 bg-white [clip-path:polygon(100%_0,100%_100%,0_0)]'
+                      }`}></div>
+                      
+                      <div className="leading-relaxed break-words">
+                        {renderFormattedText(msg.text)}
+                      </div>
+                      <div className="text-[9px] text-slate-400 text-right mt-1 flex items-center justify-end gap-1">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {msg.role === 'user' && <CheckCircle2 size={10} className="text-blue-500" />}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {isChatLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-white px-3 py-2 rounded-lg rounded-tl-none shadow-sm flex items-center gap-2 relative">
+                      <div className="absolute top-0 -left-2 w-2 h-2 bg-white [clip-path:polygon(100%_0,100%_100%,0_0)]"></div>
+                      <div className="flex gap-1">
+                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce"></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* WhatsApp Input Area */}
+              <div className="p-2 bg-[#F0F2F5] flex items-center gap-2">
+                <div className="flex gap-1 px-1">
+                  <button className="p-2 text-slate-500 hover:text-slate-700 transition-colors"><Smile size={22} /></button>
+                  <button className="p-2 text-slate-500 hover:text-slate-700 transition-colors"><Paperclip size={22} /></button>
+                </div>
+                <div className="flex-grow relative">
+                  <input 
+                    type="text" 
+                    value={chatInput} 
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleChat()}
+                    placeholder="Ketik pesan"
+                    className="w-full p-2.5 px-4 bg-white border-none rounded-full text-sm focus:ring-0 outline-none shadow-sm"
+                  />
+                </div>
+                <button 
+                  onClick={handleChat}
+                  disabled={isChatLoading || !chatInput.trim()}
+                  className={`p-3 rounded-full flex items-center justify-center transition-all shadow-md ${
+                    chatInput.trim() ? 'bg-[#00A884] text-white hover:bg-[#008F6F]' : 'bg-slate-400 text-white opacity-50'
+                  }`}
+                >
+                  <Send size={20} />
+                </button>
+              </div>
             </div>
           )}
 
           {/* CONTROL PANEL */}
-          {!isExportingMode && (
+          {mainTab !== 'konsultasi' && !isExportingMode && (
             <div className="bg-white p-6 rounded-2xl shadow-xl border-b-8 border-slate-800 transition-all">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4 border-r border-slate-100 pr-0 lg:pr-6">
@@ -581,6 +889,24 @@ export default function App() {
                         <p className="text-[9px] text-slate-400 italic ml-1">* Disarankan menggunakan gambar format PNG transparan.</p>
                       </div>
                     </div>
+                    {(mainTab === 'modul' || mainTab === 'soal') && (
+                      <div className="grid grid-cols-2 gap-2">
+                         <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 ml-1">Jumlah Pilgan</label>
+                            <input type="number" value={numPilgan} onChange={e => setNumPilgan(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded bg-white font-bold" />
+                         </div>
+                         <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-400 ml-1">Jumlah Essay</label>
+                            <input 
+                              type="number" 
+                              value={noEssayMode && mainTab === 'soal' ? 0 : numEssay} 
+                              onChange={e => setNumEssay(parseInt(e.target.value) || 0)} 
+                              disabled={noEssayMode && mainTab === 'soal'}
+                              className="w-full p-2 border rounded bg-white font-bold disabled:opacity-50" 
+                            />
+                         </div>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                        <div className="space-y-1">
                           <label className="text-[10px] font-bold text-slate-400 ml-1">Kota</label>
@@ -642,9 +968,97 @@ export default function App() {
                       <input type="text" value={alokasiWaktu} onChange={e => setAlokasiWaktu(e.target.value)} placeholder="Alokasi Waktu" className="w-full p-2 border rounded font-bold bg-white" />
                     </div>
                     <div className="space-y-1 pt-2">
-                       <label className="text-[10px] font-black text-blue-600 uppercase ml-1">Judul Materi (Topic)</label>
-                       <input type="text" value={topic} onChange={e => setTopic(e.target.value)} placeholder="Contoh: Meneladani Asmaul Husna..." className="w-full p-3 border-2 border-blue-200 rounded-xl font-black text-lg focus:border-blue-500 focus:ring-0 transition-all bg-white" />
+                       <label className="text-[10px] font-black text-blue-600 uppercase ml-1">
+                         {mainTab === 'modul' ? 'Judul Materi (Topic)' : mainTab === 'prota' ? 'Daftar Materi Tahunan' : mainTab === 'prosem' ? 'Daftar Materi Semester' : 'Judul Soal / Ujian'}
+                       </label>
+                       {mainTab === 'modul' ? (
+                         <input 
+                           type="text" 
+                           value={topic} 
+                           onChange={e => setTopic(e.target.value)} 
+                           placeholder="Contoh: Meneladani Asmaul Husna..." 
+                           className="w-full p-3 border-2 border-blue-200 rounded-xl font-black text-lg focus:border-blue-500 focus:ring-0 transition-all bg-white" 
+                         />
+                       ) : mainTab === 'soal' ? (
+                         <input 
+                           type="text" 
+                           value={examTitle} 
+                           onChange={e => setExamTitle(e.target.value)} 
+                           placeholder="Contoh: ASESMEN SUMATIF BAB 1..." 
+                           className="w-full p-3 border-2 border-blue-200 rounded-xl font-black text-lg focus:border-blue-500 focus:ring-0 transition-all bg-white" 
+                         />
+                       ) : (
+                         <textarea 
+                           value={mainTab === 'prota' ? protaList : prosemList}
+                           onChange={e => mainTab === 'prota' ? setProtaList(e.target.value) : setProsemList(e.target.value)}
+                           placeholder={mainTab === 'prota' ? "Masukkan daftar materi pokok selama satu tahun (pisahkan dengan baris baru)..." : "Masukkan daftar materi pokok selama satu semester (pisahkan dengan baris baru)..."}
+                           className="w-full p-3 border-2 border-blue-200 rounded-xl font-bold text-sm focus:border-blue-500 focus:ring-0 transition-all bg-white h-32"
+                         />
+                       )}
                     </div>
+
+                    {mainTab === 'soal' && (
+                      <div className="space-y-3 pt-4 border-t border-slate-100">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-black text-blue-600 uppercase ml-1">Daftar Materi & Tingkat Kesulitan</label>
+                          <button 
+                            onClick={() => setSoalMaterials([...soalMaterials, { topic: '', level: 'Menengah' }])}
+                            className="p-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+                            title="Tambah Materi"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        <div className="space-y-2">
+                          {soalMaterials.map((m, idx) => (
+                            <div key={idx} className="flex gap-2 items-center">
+                              <input 
+                                type="text" 
+                                value={m.topic} 
+                                onChange={e => {
+                                  const newM = [...soalMaterials];
+                                  newM[idx].topic = e.target.value;
+                                  setSoalMaterials(newM);
+                                }}
+                                placeholder={`Materi ${idx + 1}`}
+                                className="flex-grow p-2 border rounded-lg text-xs font-bold bg-white"
+                              />
+                              <select 
+                                value={m.level} 
+                                onChange={e => {
+                                  const newM = [...soalMaterials];
+                                  newM[idx].level = e.target.value as any;
+                                  setSoalMaterials(newM);
+                                }}
+                                className="p-2 border rounded-lg text-[10px] font-bold bg-white w-24"
+                              >
+                                <option value="Mudah">Mudah</option>
+                                <option value="Menengah">Menengah</option>
+                                <option value="HOTS">HOTS</option>
+                              </select>
+                              {soalMaterials.length > 1 && (
+                                <button 
+                                  onClick={() => setSoalMaterials(soalMaterials.filter((_, i) => i !== idx))}
+                                  className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                >
+                                  <Minus size={14} />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="flex items-center gap-4 pt-2">
+                          <label className="flex items-center gap-2 cursor-pointer group">
+                            <div className={`w-10 h-5 rounded-full transition-all relative ${noEssayMode ? 'bg-blue-600' : 'bg-slate-300'}`}>
+                              <input type="checkbox" checked={noEssayMode} onChange={e => setNoEssayMode(e.target.checked)} className="hidden" />
+                              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${noEssayMode ? 'left-6' : 'left-1'}`}></div>
+                            </div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase group-hover:text-blue-600">Mode Tanpa Essay</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
 
                     {/* API KEY INPUT */}
                     <div className="pt-2 border-t border-slate-100 mt-2">
@@ -695,8 +1109,9 @@ export default function App() {
                       )}
                     </div>
                   </div>
-                  <button onClick={() => handleGenerate()} disabled={isLoading} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-50">
-                    {isLoading ? <Loader2 className="animate-spin" /> : <Sparkles className="text-yellow-400" />} BUAT MODUL LENGKAP
+                  <button onClick={() => handleGenerate()} disabled={isLoading} className={`w-full text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 ${mainTab === 'modul' ? 'bg-slate-900 hover:bg-black' : mainTab === 'prota' ? 'bg-rose-600 hover:bg-rose-700' : mainTab === 'prosem' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                    {isLoading ? <Loader2 className="animate-spin" /> : <Sparkles className="text-yellow-400" />} 
+                    {mainTab === 'modul' ? 'BUAT MODUL LENGKAP' : mainTab === 'prota' ? 'BUAT PROTA LENGKAP' : mainTab === 'prosem' ? 'BUAT PROSEM LENGKAP' : 'BUAT SOAL LENGKAP'}
                   </button>
                   {error && <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-xs flex items-center gap-2"><AlertTriangle size={14}/> {error}</div>}
                 </div>
@@ -705,7 +1120,7 @@ export default function App() {
           )}
 
           {/* TAB NAVIGATION */}
-          {result && !isExportingMode && (
+          {result && !isExportingMode && mainTab === 'modul' && (
             <div className="flex flex-wrap gap-2 justify-center bg-white p-3 rounded-2xl shadow-lg border border-slate-200 sticky top-4 z-50">
               <button onClick={() => setActiveTab('rpp')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'rpp' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Layout size={12}/> Modul Utama</button>
               <button onClick={() => setActiveTab('materi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'materi' ? 'bg-amber-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Materi</button>
@@ -713,6 +1128,7 @@ export default function App() {
               <button onClick={() => setActiveTab('penugasan')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'penugasan' ? 'bg-pink-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><PenTool size={12}/> Tugas</button>
               <button onClick={() => setActiveTab('instrumen')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'instrumen' ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Rubrik</button>
               <button onClick={() => setActiveTab('evaluasi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'evaluasi' ? 'bg-orange-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><FileText size={12}/> Evaluasi</button>
+              <button onClick={() => setActiveTab('kisi_kisi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'kisi_kisi' ? 'bg-cyan-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Kisi-kisi</button>
               
               <div className="h-8 w-px bg-slate-200 mx-2 hidden lg:block"></div>
               
@@ -724,7 +1140,7 @@ export default function App() {
                 <button onClick={handleExportImage} className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-emerald-700 transition-all"><ImageIcon size={12}/> JPG</button>
               </div>
 
-              {activeTab === 'evaluasi' && (
+              {(activeTab === 'evaluasi') && (
                 <button onClick={() => setShowAnswers(!showAnswers)} className={`ml-2 px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 border transition-all ${showAnswers ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-300'}`}>
                   {showAnswers ? <EyeOff size={12}/> : <Eye size={12}/>} {showAnswers ? 'Guru View' : 'Siswa View'}
                 </button>
@@ -732,8 +1148,45 @@ export default function App() {
             </div>
           )}
 
+          {/* TAB NAVIGATION FOR SOAL */}
+          {result && !isExportingMode && mainTab === 'soal' && (
+            <div className="flex flex-wrap gap-2 justify-center bg-white p-3 rounded-2xl shadow-lg border border-slate-200 sticky top-4 z-50">
+              <button onClick={() => setActiveTab('evaluasi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'evaluasi' ? 'bg-orange-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><FileText size={12}/> Daftar Soal</button>
+              <button onClick={() => setActiveTab('kisi_kisi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'kisi_kisi' ? 'bg-cyan-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Kisi-kisi</button>
+              
+              <div className="h-8 w-px bg-slate-200 mx-2 hidden lg:block"></div>
+              
+              <div className="flex gap-1">
+                <button onClick={handleExportPDF} disabled={isPdfLoading} className="bg-red-600 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-red-700 transition-all disabled:opacity-50">
+                  {isPdfLoading ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>} PDF
+                </button>
+                <button onClick={() => exportToWord('doc')} className="bg-slate-800 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-black transition-all"><FileType size={12}/> Word</button>
+                <button onClick={handleExportImage} className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-emerald-700 transition-all"><ImageIcon size={12}/> JPG</button>
+              </div>
+
+              <button onClick={() => setShowAnswers(!showAnswers)} className={`ml-2 px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 border transition-all ${showAnswers ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-300'}`}>
+                {showAnswers ? <EyeOff size={12}/> : <Eye size={12}/>} {showAnswers ? 'Mode Guru' : 'Mode Siswa'}
+              </button>
+            </div>
+          )}
+
+          {/* EXPORT BAR FOR PROTA/PROSEM */}
+          {result && !isExportingMode && (mainTab === 'prota' || mainTab === 'prosem') && (
+            <div className="flex justify-center bg-white p-3 rounded-2xl shadow-lg border border-slate-200 sticky top-4 z-50 gap-2">
+              <button onClick={handleExportPDF} disabled={isPdfLoading} className="bg-red-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-red-700 transition-all disabled:opacity-50 shadow-md">
+                {isPdfLoading ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>} Unduh PDF
+              </button>
+              <button onClick={() => exportToWord('doc')} className="bg-slate-800 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-black transition-all shadow-md">
+                <FileType size={14}/> Unduh Word
+              </button>
+              <button onClick={handleExportImage} className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-md">
+                <ImageIcon size={14}/> Unduh JPG
+              </button>
+            </div>
+          )}
+
           {/* PREVIEW AREA */}
-          {result && (
+          {result && mainTab !== 'konsultasi' && (
             <div ref={exportAreaRef}
                  id="export-area"
                  className={`bg-white text-black font-serif transition-all ${isExportingMode ? 'p-0 shadow-none border-none' : 'p-10 shadow-2xl border border-slate-300 mb-20'}`} 
@@ -1005,6 +1458,104 @@ export default function App() {
                                 ))}
                               </tbody>
                             </table>
+                          ) : activeTab === 'kisi_kisi' ? (
+                            <div className="space-y-4">
+                              <div className="flex justify-end no-print mb-4">
+                                {!isExportingMode && (
+                                  <button onClick={handleExportPDF} className="bg-cyan-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-cyan-700 transition-colors shadow-md">
+                                    <Download size={14}/> Unduh Kisi-kisi (PDF)
+                                  </button>
+                                )}
+                              </div>
+                              <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                              <thead>
+                                <tr className="bg-slate-100 font-bold text-[11px]">
+                                  <td className="p-2 border border-black w-10 text-center" style={{ border: '1pt solid black' }}>No</td>
+                                  <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>Materi</td>
+                                  <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>Indikator Soal</td>
+                                  <td className="p-2 border border-black w-16 text-center" style={{ border: '1pt solid black' }}>Level</td>
+                                  <td className="p-2 border border-black w-20 text-center" style={{ border: '1pt solid black' }}>Bentuk</td>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {result.kisiKisi?.map((row, idx) => (
+                                  <tr key={idx} className="text-[10px] section-block" style={{ pageBreakInside: 'avoid' }}>
+                                    <td className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>{row.no}</td>
+                                    <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>{row.materi}</td>
+                                    <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>{row.indikator}</td>
+                                    <td className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>{row.level}</td>
+                                    <td className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>{row.bentukSoal}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            </div>
+                          ) : activeTab === 'prota' ? (
+                            <div className="space-y-4">
+                              <div className="flex justify-end no-print mb-4">
+                                {!isExportingMode && (
+                                  <button onClick={handleExportPDF} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-rose-700 transition-colors shadow-md">
+                                    <Download size={14}/> Unduh Prota (PDF)
+                                  </button>
+                                )}
+                              </div>
+                              <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                              <thead>
+                                <tr className="bg-slate-100 font-bold text-[11px]">
+                                  <td className="p-3 border border-black w-24 text-center" style={{ border: '1pt solid black' }}>Semester</td>
+                                  <td className="p-3 border border-black" style={{ border: '1pt solid black' }}>Materi Pokok / Lingkup Materi</td>
+                                  <td className="p-3 border border-black w-32 text-center" style={{ border: '1pt solid black' }}>Alokasi Waktu</td>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {result.prota?.map((row, idx) => (
+                                  <tr key={idx} className="text-[11px] section-block" style={{ pageBreakInside: 'avoid' }}>
+                                    <td className="p-3 border border-black text-center" style={{ border: '1pt solid black' }}>{row.semester}</td>
+                                    <td className="p-3 border border-black" style={{ border: '1pt solid black' }}>{row.materi}</td>
+                                    <td className="p-3 border border-black text-center" style={{ border: '1pt solid black' }}>{row.alokasiWaktu}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            </div>
+                          ) : activeTab === 'prosem' ? (
+                            <div className="space-y-4">
+                              <div className="flex justify-end no-print mb-4">
+                                {!isExportingMode && (
+                                  <button onClick={handleExportPDF} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-teal-700 transition-colors shadow-md">
+                                    <Download size={14}/> Unduh Prosem (PDF)
+                                  </button>
+                                )}
+                              </div>
+                              <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                              <thead>
+                                <tr className="bg-slate-100 font-bold text-[10px]">
+                                  <td rowSpan={2} className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>Materi Pokok</td>
+                                  <td rowSpan={2} className="p-2 border border-black w-16 text-center" style={{ border: '1pt solid black' }}>AW</td>
+                                  <td colSpan={6} className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>Bulan</td>
+                                </tr>
+                                <tr className="bg-slate-50 text-[9px]">
+                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>1</td>
+                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>2</td>
+                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>3</td>
+                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>4</td>
+                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>5</td>
+                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>6</td>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {result.prosem?.map((row, idx) => (
+                                  <tr key={idx} className="text-[10px] section-block" style={{ pageBreakInside: 'avoid' }}>
+                                    <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>{row.materi}</td>
+                                    <td className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>{row.alokasiWaktu}</td>
+                                    {row.jadwal.map((j, jIdx) => (
+                                      <td key={jIdx} className="p-2 border border-black text-center font-bold" style={{ border: '1pt solid black' }}>{j}</td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            </div>
                           ) : (
                             <div className="text-[12px] leading-relaxed">
                               {renderFormattedText(getAttachmentData()?.isi || "Isi sedang dimuat...")}
