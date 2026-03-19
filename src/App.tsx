@@ -1818,34 +1818,80 @@ export default function App() {
                                   </button>
                                 )}
                               </div>
-                              <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
-                              <thead>
-                                <tr className="bg-slate-100 font-bold text-[10px]">
-                                  <td rowSpan={2} className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>Materi Pokok</td>
-                                  <td rowSpan={2} className="p-2 border border-black w-16 text-center" style={{ border: '1pt solid black' }}>AW</td>
-                                  <td colSpan={6} className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>Bulan</td>
-                                </tr>
-                                <tr className="bg-slate-50 text-[9px]">
-                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>1</td>
-                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>2</td>
-                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>3</td>
-                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>4</td>
-                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>5</td>
-                                  <td className="p-1 border border-black text-center" style={{ border: '1pt solid black' }}>6</td>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {result.prosem?.map((row, idx) => (
-                                  <tr key={idx} className="text-[10px] section-block" style={{ pageBreakInside: 'avoid' }}>
-                                    <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>{row.materi}</td>
-                                    <td className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>{row.alokasiWaktu}</td>
-                                    {row.jadwal.map((j, jIdx) => (
-                                      <td key={jIdx} className="p-2 border border-black text-center font-bold" style={{ border: '1pt solid black' }}>{j}</td>
-                                    ))}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                              
+                              {result.prosem && (
+                                <div className="prosem-export-content">
+                                  <div className="text-center font-bold text-lg mb-6 uppercase">PROGRAM SEMESTER (PROSEM)</div>
+                                  
+                                  <div className="grid grid-cols-2 gap-8 mb-4 text-[11px]">
+                                    <div className="space-y-1">
+                                      <div className="flex"><span className="w-32">Mata Pelajaran</span><span>: {displaySubject}</span></div>
+                                      <div className="flex"><span className="w-32">Kelas</span><span>: {kelas}</span></div>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <div className="flex justify-end"><span className="w-32">Semester</span><span className="w-40">: {semester === 'Ganjil' ? 'I (Ganjil)' : 'II (Genap)'}</span></div>
+                                      <div className="flex justify-end"><span className="w-32">Tahun Pelajaran</span><span className="w-40">: {tahunAjaran}</span></div>
+                                    </div>
+                                  </div>
+
+                                  <table className="w-full border-collapse border border-black text-[9px]" style={{ border: '1pt solid black', tableLayout: 'fixed' }}>
+                                    <thead>
+                                      <tr className="bg-slate-100 font-bold">
+                                        <th rowSpan={3} className="border border-black p-1 w-8" style={{ border: '1pt solid black' }}>No</th>
+                                        <th rowSpan={3} className="border border-black p-1" style={{ border: '1pt solid black' }}>Kompetensi Dasar / Materi Pokok</th>
+                                        <th rowSpan={3} className="border border-black p-1 w-12" style={{ border: '1pt solid black' }}>Alokasi Waktu (JP)</th>
+                                        <th colSpan={ (semester === 'Ganjil' ? calendarGanjil : calendarGenap).reduce((acc, m) => acc + m.weeks.length, 0) } className="border border-black p-1 text-center" style={{ border: '1pt solid black' }}>Bulan</th>
+                                      </tr>
+                                      <tr className="bg-slate-50 font-bold">
+                                        {(semester === 'Ganjil' ? calendarGanjil : calendarGenap).map((m, i) => (
+                                          <th key={i} colSpan={m.weeks.length} className="border border-black p-1 text-center" style={{ border: '1pt solid black' }}>{m.month}</th>
+                                        ))}
+                                      </tr>
+                                      <tr className="bg-slate-50">
+                                        {(semester === 'Ganjil' ? calendarGanjil : calendarGenap).map((m) => 
+                                          m.weeks.map((_, i) => (
+                                            <th key={i} className="border border-black p-0.5 text-center w-5" style={{ border: '1pt solid black' }}>{i + 1}</th>
+                                          ))
+                                        )}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {result.prosem.map((row, idx) => (
+                                        <tr key={idx} className="section-block" style={{ pageBreakInside: 'avoid' }}>
+                                          <td className="border border-black p-1 text-center" style={{ border: '1pt solid black' }}>{idx + 1}</td>
+                                          <td className="border border-black p-1" style={{ border: '1pt solid black' }}>{row.materi}</td>
+                                          <td className="border border-black p-1 text-center" style={{ border: '1pt solid black' }}>{row.alokasiWaktu}</td>
+                                          {(semester === 'Ganjil' ? calendarGanjil : calendarGenap).flatMap(m => m.weeks).map((_, vIdx) => {
+                                            const val = row.jadwal[vIdx];
+                                            return (
+                                              <td key={vIdx} className={`border border-black p-0.5 text-center ${val === 'X' || val === 'V' ? 'bg-slate-400' : ''}`} style={{ border: '1pt solid black' }}>
+                                                {val === 'X' || val === 'V' ? '' : val}
+                                              </td>
+                                            );
+                                          })}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+
+                                  <div className="mt-12 grid grid-cols-2 text-[11px]">
+                                    <div className="text-center">
+                                      <p>Mengetahui,</p>
+                                      <p>Kepala Sekolah</p>
+                                      <div className="h-20"></div>
+                                      <p className="font-bold underline uppercase">{namaKepala}</p>
+                                      <p>NBM. {nbmKepala}</p>
+                                    </div>
+                                    <div className="text-center">
+                                      <p>{kota}, {tanggal}</p>
+                                      <p>Guru Mata Pelajaran</p>
+                                      <div className="h-20"></div>
+                                      <p className="font-bold underline uppercase">{namaPenyusun}</p>
+                                      <p>NBM. {nbmPenyusun}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div className="text-[12px] leading-relaxed">
