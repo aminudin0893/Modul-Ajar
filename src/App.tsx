@@ -4,7 +4,7 @@ import {
   MapPin, Calendar, School, UserCheck, AlertTriangle, RefreshCw,
   Maximize2, FileText, Layout, Users, User, ClipboardList, PenTool, FileType, Eye, EyeOff, Copy,
   CheckCircle2, Printer, Upload, Trash2, MessageSquare, Plus, Minus,
-  Send, Smile, Paperclip
+  Send, Smile, Paperclip, Edit3, Save
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -24,7 +24,7 @@ interface ResultData {
     pilgan: Array<{ soal: string; a: string; b: string; c: string; d: string; kunci: string }>;
     essay: Array<{ soal: string; kunci: string }>;
   };
-  kisiKisi: Array<{ no: number; materi: string; indikator: string; level: string; bentukSoal: string }>;
+  kisiKisi: Array<{ no: number; materi: string; indikator: string; level: string; bloom: string; bentukSoal: string }>;
   prota: Array<{ semester: string; materi: string; alokasiWaktu: string }>;
   prosem: Array<{ materi: string; alokasiWaktu: string; jadwal: string[] }>;
   tekaTekiSilang: {
@@ -78,9 +78,35 @@ export default function App() {
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [protaList, setProtaList] = useState('');
   const [prosemList, setProsemList] = useState('');
-  const [soalMaterials, setSoalMaterials] = useState<Array<{ topic: string; level: 'Mudah' | 'Menengah' | 'HOTS' }>>([{ topic: '', level: 'Menengah' }]);
+  const [soalMaterials, setSoalMaterials] = useState<Array<{ topic: string; level: 'Mudah' | 'Menengah' | 'HOTS'; bloom: string }>>([{ topic: '', level: 'Menengah', bloom: 'C2' }]);
   const [examTitle, setExamTitle] = useState('ASESMEN SUMATIF');
   const [noEssayMode, setNoEssayMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isGeneratingMateri, setIsGeneratingMateri] = useState(false);
+  
+  // --- STATE KALENDER PENDIDIKAN ---
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarGanjil, setCalendarGanjil] = useState([
+    { month: 'Juli', weeks: ['T', 'T', 'E', 'E', 'E'] },
+    { month: 'Agustus', weeks: ['E', 'E', 'E', 'E', 'E'] },
+    { month: 'September', weeks: ['E', 'E', 'E', 'E', 'T'] },
+    { month: 'Oktober', weeks: ['E', 'E', 'E', 'E', 'E'] },
+    { month: 'November', weeks: ['E', 'E', 'E', 'E', 'E'] },
+    { month: 'Desember', weeks: ['E', 'E', 'T', 'T', 'T'] },
+  ]);
+  const [calendarGenap, setCalendarGenap] = useState([
+    { month: 'Januari', weeks: ['T', 'E', 'E', 'E', 'E'] },
+    { month: 'Februari', weeks: ['E', 'E', 'E', 'E', 'E'] },
+    { month: 'Maret', weeks: ['E', 'E', 'T', 'E', 'E'] },
+    { month: 'April', weeks: ['E', 'T', 'T', 'E', 'E'] },
+    { month: 'Mei', weeks: ['E', 'E', 'E', 'E', 'T'] },
+    { month: 'Juni', weeks: ['T', 'T', 'T', 'T', 'T'] },
+  ]);
+
+  const [effectiveWeeksGanjil, setEffectiveWeeksGanjil] = useState(19);
+  const [nonEffectiveWeeksGanjil, setNonEffectiveWeeksGanjil] = useState(7);
+  const [effectiveWeeksGenap, setEffectiveWeeksGenap] = useState(18);
+  const [nonEffectiveWeeksGenap, setNonEffectiveWeeksGenap] = useState(8);
 
   useEffect(() => {
     const savedKey = localStorage.getItem('gemini_api_key');
@@ -91,6 +117,21 @@ export default function App() {
     setUserApiKey(key);
     localStorage.setItem('gemini_api_key', key);
   };
+
+  // Update totals when calendar changes
+  useEffect(() => {
+    const calc = (cal: any[]) => {
+      let e = 0, t = 0;
+      cal.forEach(m => m.weeks.forEach((w: string) => w === 'E' ? e++ : t++));
+      return { e, t };
+    };
+    const ganjil = calc(calendarGanjil);
+    setEffectiveWeeksGanjil(ganjil.e);
+    setNonEffectiveWeeksGanjil(ganjil.t);
+    const genap = calc(calendarGenap);
+    setEffectiveWeeksGenap(genap.e);
+    setNonEffectiveWeeksGenap(genap.t);
+  }, [calendarGanjil, calendarGenap]);
 
   useEffect(() => {
     // Memuat logo default saat pertama kali aplikasi dijalankan
@@ -265,6 +306,42 @@ export default function App() {
     });
   };
 
+  const handleGenerateMateriList = async () => {
+    setIsGeneratingMateri(true);
+    const apiKeyToUse = userApiKey || process.env.GEMINI_API_KEY || "";
+    if (!apiKeyToUse) {
+      setError("Kode aplikasi tidak ditemukan. Silakan masukkan kode di pengaturan.");
+      setIsGeneratingMateri(false);
+      return;
+    }
+
+    const ai = new GoogleGenAI({ apiKey: apiKeyToUse });
+    const type = mainTab === 'prota' ? 'Tahunan (1 Tahun)' : 'Semester (6 Bulan)';
+
+    try {
+      const response = await ai.models.generateContent({
+        model: MODEL_NAME,
+        contents: [
+          { role: 'user', parts: [{ text: `Berikan daftar materi pokok Kurikulum Merdeka Fase D (SMP) untuk Mata Pelajaran: ${displaySubject}, ${kelas}. 
+          Format output: HANYA DAFTAR MATERI, satu materi per baris, tanpa nomor, tanpa penjelasan, tanpa kata pengantar. 
+          Berikan materi untuk jangka waktu: ${type}.` }] }
+        ],
+      });
+
+      const list = response.text || "";
+      if (mainTab === 'prota') {
+        setProtaList(list.trim());
+      } else {
+        setProsemList(list.trim());
+      }
+    } catch (err) {
+      console.error("Generate Materi Error:", err);
+      setError("Gagal generate materi otomatis.");
+    } finally {
+      setIsGeneratingMateri(false);
+    }
+  };
+
   const handleChat = async () => {
     if (!chatInput.trim() || isChatLoading) return;
     
@@ -347,6 +424,13 @@ export default function App() {
 
     const ai = new GoogleGenAI({ apiKey: apiKeyToUse });
 
+    const calendarInfo = `
+      Kalender Pendidikan Detail:
+      Semester Ganjil: ${calendarGanjil.map(m => `${m.month} (${m.weeks.join(',')})`).join('; ')}
+      Semester Genap: ${calendarGenap.map(m => `${m.month} (${m.weeks.join(',')})`).join('; ')}
+      (E = Efektif, T = Tidak Efektif, L = Libur)
+    `;
+
     let prompt = "";
     if (mainTab === 'modul') {
       prompt = `Buat RPP MENDALAM Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, materi: "${topic}", Mata Pelajaran: ${displaySubject}. 
@@ -366,9 +450,9 @@ export default function App() {
           `Untuk mata pelajaran ${displaySubject}, sesuaikan struktur "materiLengkap" agar mencakup konsep-konsep kunci secara lengkap, sistematis, mendalam, dan bebas dari kesalahan pengetikan (typo).`
         }
         6. Evaluasi: ${numPilgan} Pilihan Ganda (A-D) dan ${numEssay} Essay berbobot tinggi.
-        7. Kisi-kisi Soal: Buat tabel kisi-kisi soal yang mencakup nomor, materi, indikator soal, level kognitif (L1/L2/L3), dan bentuk soal.
-        8. Program Tahunan (Prota): Buat rencana program tahunan yang mencakup semester, materi pokok, dan alokasi waktu.
-        9. Program Semester (Prosem): Buat rencana program semester yang mencakup materi pokok, alokasi waktu, dan jadwal bulanan (6 bulan per semester).
+        7. Kisi-kisi Soal: Buat tabel kisi-kisi soal yang mencakup nomor, materi, indikator soal, level kognitif (L1/L2/L3), Taksonomi Bloom (C1-C6), dan bentuk soal.
+        8. Program Tahunan (Prota): Buat rencana program tahunan yang mencakup semester, materi pokok, dan alokasi waktu. Gunakan kalender pendidikan: Ganjil (${effectiveWeeksGanjil} Efektif, ${nonEffectiveWeeksGanjil} Tidak Efektif), Genap (${effectiveWeeksGenap} Efektif, ${nonEffectiveWeeksGenap} Tidak Efektif). ${calendarInfo}
+        9. Program Semester (Prosem): Buat rencana program semester (6 bulan) yang mencakup materi pokok, alokasi waktu, dan jadwal bulanan. Sesuaikan dengan jumlah pekan efektif yang diberikan. ${calendarInfo}
         10. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
         11. Tambahkan bagian "tekaTekiSilang" yang berisi ${ttsMode === 'full' ? 'minimal 5 pertanyaan mendatar dan 5 pertanyaan menurun' : 'minimal 10 pertanyaan mendatar saja (kosongkan bagian menurun)'} yang relevan dengan materi.
         Jawab dalam format JSON murni sesuai schema.`;
@@ -377,13 +461,18 @@ export default function App() {
         Daftar Materi Pokok yang diinginkan:
         ${protaList}
         
+        Kalender Pendidikan:
+        - Semester Ganjil: ${effectiveWeeksGanjil} Pekan Efektif, ${nonEffectiveWeeksGanjil} Pekan Tidak Efektif.
+        - Semester Genap: ${effectiveWeeksGenap} Pekan Efektif, ${nonEffectiveWeeksGenap} Pekan Tidak Efektif.
+        ${calendarInfo}
+        
         WAJIB:
         1. Gunakan Bahasa Indonesia formal (EYD) yang sangat baik.
         2. Susun materi tersebut ke dalam Semester Ganjil dan Genap secara logis.
-        3. Tentukan Alokasi Waktu (JP) yang realistis untuk setiap materi.
+        3. Tentukan Alokasi Waktu (JP) yang realistis untuk setiap materi berdasarkan jumlah pekan efektif yang tersedia.
         4. Jawab dalam format JSON murni sesuai schema (hanya isi bagian prota, yang lain bisa dikosongkan atau dummy).`;
     } else if (mainTab === 'soal') {
-      const materiList = soalMaterials.map(m => `- ${m.topic} (Level: ${m.level})`).join('\n');
+      const materiList = soalMaterials.map(m => `- ${m.topic} (Kesulitan: ${m.level}, Taksonomi Bloom: ${m.bloom})`).join('\n');
       prompt = `Buat SOAL UJIAN / ASESMEN Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, Mata Pelajaran: ${displaySubject}.
         Judul Ujian: ${examTitle}
         Daftar Materi & Tingkat Kesulitan:
@@ -393,17 +482,22 @@ export default function App() {
         1. Gunakan Bahasa Indonesia formal (EYD) yang sangat baik.
         2. Buat ${numPilgan} soal Pilihan Ganda (A-D) yang berkualitas tinggi sesuai tingkat kesulitan yang diminta.
         3. ${noEssayMode ? 'JANGAN buat soal Essay.' : `Buat ${numEssay} soal Essay yang mendalam.`}
-        4. Buat tabel KISI-KISI SOAL yang lengkap mencakup nomor, materi, indikator soal, level kognitif (L1/L2/L3), dan bentuk soal.
+        4. Buat tabel KISI-KISI SOAL yang lengkap mencakup nomor, materi, indikator soal, level kognitif (L1/L2/L3), Taksonomi Bloom (C1-C6), dan bentuk soal.
         5. Jawab dalam format JSON murni sesuai schema (hanya isi bagian evaluasi dan kisiKisi, yang lain bisa dikosongkan atau dummy).`;
     } else {
       prompt = `Buat PROGRAM SEMESTER (PROSEM) Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, Semester: ${semester}, Mata Pelajaran: ${displaySubject}.
         Daftar Materi Pokok yang diinginkan:
         ${prosemList}
         
+        Kalender Pendidikan Semester ${semester}:
+        - Pekan Efektif: ${semester === 'Ganjil' ? effectiveWeeksGanjil : effectiveWeeksGenap}
+        - Pekan Tidak Efektif: ${semester === 'Ganjil' ? nonEffectiveWeeksGanjil : nonEffectiveWeeksGenap}
+        ${calendarInfo}
+        
         WAJIB:
         1. Gunakan Bahasa Indonesia formal (EYD) yang sangat baik.
-        2. Tentukan Alokasi Waktu (JP) yang realistis untuk setiap materi.
-        3. Buat jadwal distribusi bulanan (6 bulan) dengan menandai minggu efektif (gunakan tanda 'X' atau 'V' dalam array jadwal).
+        2. Tentukan Alokasi Waktu (JP) yang realistis untuk setiap materi berdasarkan jumlah pekan efektif.
+        3. Buat jadwal distribusi bulanan (6 bulan) dengan menandai minggu efektif (gunakan tanda 'X' atau 'V' dalam array jadwal). Pastikan total minggu efektif yang ditandai sesuai dengan input kalender pendidikan di atas.
         4. Jawab dalam format JSON murni sesuai schema (hanya isi bagian prosem, yang lain bisa dikosongkan atau dummy).`;
     }
 
@@ -449,6 +543,7 @@ export default function App() {
                     materi: { type: Type.STRING },
                     indikator: { type: Type.STRING },
                     level: { type: Type.STRING },
+                    bloom: { type: Type.STRING },
                     bentukSoal: { type: Type.STRING }
                   }
                 }
@@ -520,6 +615,7 @@ export default function App() {
     setIsPdfLoading(true); 
     setIsExportingMode(true);
     
+    const isLandscape = activeTab === 'prosem';
     const paperDim = paperFormat === 'a4' ? 'a4' : [210, 330];
     const baseName = mainTab === 'soal' ? examTitle : topic;
     
@@ -536,14 +632,14 @@ export default function App() {
           useCORS: true, 
           logging: false,
           letterRendering: true,
-          width: 718,
-          windowWidth: 718,
+          width: isLandscape ? 1050 : 718,
+          windowWidth: isLandscape ? 1050 : 718,
           x: 0,
           y: 0,
           scrollX: 0,
           scrollY: 0,
         },
-        jsPDF: { unit: 'mm', format: paperDim, orientation: 'portrait', compress: true },
+        jsPDF: { unit: 'mm', format: paperDim, orientation: isLandscape ? 'landscape' : 'portrait', compress: true },
         pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.header-bg', '.section-block'] }
       };
       
@@ -572,7 +668,7 @@ export default function App() {
         useCORS: true, 
         allowTaint: true,
         backgroundColor: '#ffffff',
-        windowWidth: 1200,
+        windowWidth: activeTab === 'prosem' ? 1400 : 1200,
         onclone: (clonedDoc: Document) => {
           const clonedElement = clonedDoc.getElementById('export-area');
           if (clonedElement) {
@@ -600,7 +696,8 @@ export default function App() {
     if (!result || !exportAreaRef.current) return;
     const baseName = mainTab === 'soal' ? examTitle : topic;
     const fileName = `${mainTab.toUpperCase()}_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.${ext}`;
-    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>@page { margin: 2.0cm; } body { font-family: 'Times New Roman', serif; font-size: 11pt; } table { border-collapse: collapse; width: 100%; border: 1pt solid black; } th, td { border: 1pt solid black; padding: 8pt; vertical-align: top; } .header-bg { background-color: #b4c7e7; text-align: center; font-weight: bold; }</style></head><body>`;
+    const isLandscape = activeTab === 'prosem';
+    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><style>@page { size: ${isLandscape ? 'landscape' : 'portrait'}; margin: 2.0cm; } body { font-family: 'Times New Roman', serif; font-size: 11pt; } table { border-collapse: collapse; width: 100%; border: 1pt solid black; } th, td { border: 1pt solid black; padding: 8pt; vertical-align: top; } .header-bg { background-color: #b4c7e7; text-align: center; font-weight: bold; }</style></head><body>`;
     const footer = "</body></html>";
     const contentHtml = exportAreaRef.current.innerHTML;
     const blob = new Blob(['\ufeff', header + contentHtml + footer], { type: 'application/msword' });
@@ -967,9 +1064,172 @@ export default function App() {
                       </select>
                       <input type="text" value={alokasiWaktu} onChange={e => setAlokasiWaktu(e.target.value)} placeholder="Alokasi Waktu" className="w-full p-2 border rounded font-bold bg-white" />
                     </div>
-                    <div className="space-y-1 pt-2">
-                       <label className="text-[10px] font-black text-blue-600 uppercase ml-1">
-                         {mainTab === 'modul' ? 'Judul Materi (Topic)' : mainTab === 'prota' ? 'Daftar Materi Tahunan' : mainTab === 'prosem' ? 'Daftar Materi Semester' : 'Judul Soal / Ujian'}
+
+                    {(mainTab === 'prota' || mainTab === 'prosem') && (
+                      <div className="space-y-4">
+                        <button 
+                          onClick={() => setShowCalendar(!showCalendar)}
+                          className="w-full p-3 bg-slate-800 text-white rounded-xl font-black text-[10px] uppercase flex items-center justify-center gap-2 hover:bg-black transition-all shadow-lg"
+                        >
+                          <Calendar size={14} /> {showCalendar ? 'Tutup Kalender Pendidikan' : 'Buka Kalender Pendidikan'}
+                        </button>
+
+                        {showCalendar && (
+                          <div className="space-y-6 p-4 bg-white rounded-2xl border-2 border-slate-200 shadow-xl animate-in fade-in slide-in-from-top-4 duration-300">
+                            <div className="flex items-center justify-between border-b pb-2">
+                              <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Kalender Pendidikan</h4>
+                              <div className="flex gap-3 text-[9px] font-bold">
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-emerald-500 rounded-full"></span> Efektif</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-rose-500 rounded-full"></span> Tdk Efektif</span>
+                                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-amber-500 rounded-full"></span> Libur</span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-6">
+                              {/* SEMESTER GANJIL */}
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1 h-4 bg-rose-600 rounded-full"></div>
+                                  <h5 className="text-[10px] font-black text-rose-600 uppercase">Semester Ganjil</h5>
+                                </div>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-[10px]">
+                                    <thead>
+                                      <tr className="text-slate-400 font-bold">
+                                        <th className="text-left py-1">Bulan</th>
+                                        <th className="text-center py-1">W1</th>
+                                        <th className="text-center py-1">W2</th>
+                                        <th className="text-center py-1">W3</th>
+                                        <th className="text-center py-1">W4</th>
+                                        <th className="text-center py-1">W5</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                      {calendarGanjil.map((m, mIdx) => (
+                                        <tr key={mIdx}>
+                                          <td className="py-2 font-bold text-slate-600">{m.month}</td>
+                                          {m.weeks.map((w, wIdx) => (
+                                            <td key={wIdx} className="text-center py-1 px-0.5">
+                                              <button 
+                                                onClick={() => {
+                                                  const newCal = [...calendarGanjil];
+                                                  const states = ['E', 'T', 'L'];
+                                                  const nextIdx = (states.indexOf(w) + 1) % states.length;
+                                                  newCal[mIdx].weeks[wIdx] = states[nextIdx] as any;
+                                                  setCalendarGanjil(newCal);
+                                                }}
+                                                className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[9px] transition-all shadow-sm transform active:scale-90 ${
+                                                  w === 'E' ? 'bg-emerald-500 text-white' : 
+                                                  w === 'T' ? 'bg-rose-500 text-white' : 
+                                                  'bg-amber-500 text-white'
+                                                }`}
+                                              >
+                                                {w}
+                                              </button>
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+
+                              {/* SEMESTER GENAP */}
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-1 h-4 bg-teal-600 rounded-full"></div>
+                                  <h5 className="text-[10px] font-black text-teal-600 uppercase">Semester Genap</h5>
+                                </div>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-[10px]">
+                                    <thead>
+                                      <tr className="text-slate-400 font-bold">
+                                        <th className="text-left py-1">Bulan</th>
+                                        <th className="text-center py-1">W1</th>
+                                        <th className="text-center py-1">W2</th>
+                                        <th className="text-center py-1">W3</th>
+                                        <th className="text-center py-1">W4</th>
+                                        <th className="text-center py-1">W5</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                      {calendarGenap.map((m, mIdx) => (
+                                        <tr key={mIdx}>
+                                          <td className="py-2 font-bold text-slate-600">{m.month}</td>
+                                          {m.weeks.map((w, wIdx) => (
+                                            <td key={wIdx} className="text-center py-1 px-0.5">
+                                              <button 
+                                                onClick={() => {
+                                                  const newCal = [...calendarGenap];
+                                                  const states = ['E', 'T', 'L'];
+                                                  const nextIdx = (states.indexOf(w) + 1) % states.length;
+                                                  newCal[mIdx].weeks[wIdx] = states[nextIdx] as any;
+                                                  setCalendarGenap(newCal);
+                                                }}
+                                                className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[9px] transition-all shadow-sm transform active:scale-90 ${
+                                                  w === 'E' ? 'bg-emerald-500 text-white' : 
+                                                  w === 'T' ? 'bg-rose-500 text-white' : 
+                                                  'bg-amber-500 text-white'
+                                                }`}
+                                              >
+                                                {w}
+                                              </button>
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200 shadow-inner">
+                        <div className="space-y-3">
+                          <h4 className="text-[10px] font-black text-rose-600 uppercase flex items-center gap-1"><Calendar size={10}/> Semester Ganjil</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[9px] font-bold text-slate-500 block mb-1">Pekan Efektif</label>
+                              <input type="number" value={effectiveWeeksGanjil} onChange={e => setEffectiveWeeksGanjil(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded font-bold text-xs focus:border-rose-300 focus:ring-0 outline-none" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-slate-500 block mb-1">Pekan Tidak Efektif</label>
+                              <input type="number" value={nonEffectiveWeeksGanjil} onChange={e => setNonEffectiveWeeksGanjil(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded font-bold text-xs focus:border-rose-300 focus:ring-0 outline-none" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <h4 className="text-[10px] font-black text-teal-600 uppercase flex items-center gap-1"><Calendar size={10}/> Semester Genap</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="text-[9px] font-bold text-slate-500 block mb-1">Pekan Efektif</label>
+                              <input type="number" value={effectiveWeeksGenap} onChange={e => setEffectiveWeeksGenap(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded font-bold text-xs focus:border-teal-300 focus:ring-0 outline-none" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-bold text-slate-500 block mb-1">Pekan Tidak Efektif</label>
+                              <input type="number" value={nonEffectiveWeeksGenap} onChange={e => setNonEffectiveWeeksGenap(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded font-bold text-xs focus:border-teal-300 focus:ring-0 outline-none" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="space-y-1 pt-2">
+                       <label className="text-[10px] font-black text-blue-600 uppercase ml-1 flex items-center justify-between">
+                         <span>{mainTab === 'modul' ? 'Judul Materi (Topic)' : mainTab === 'prota' ? 'Daftar Materi Tahunan' : mainTab === 'prosem' ? 'Daftar Materi Semester' : 'Judul Soal / Ujian'}</span>
+                         {(mainTab === 'prota' || mainTab === 'prosem') && (
+                           <button 
+                             onClick={handleGenerateMateriList}
+                             disabled={isGeneratingMateri}
+                             className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition-all text-[9px] font-bold border border-blue-200 disabled:opacity-50"
+                           >
+                             {isGeneratingMateri ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                             Generate Contoh
+                           </button>
+                         )}
                        </label>
                        {mainTab === 'modul' ? (
                          <input 
@@ -1002,7 +1262,7 @@ export default function App() {
                         <div className="flex items-center justify-between">
                           <label className="text-[10px] font-black text-blue-600 uppercase ml-1">Daftar Materi & Tingkat Kesulitan</label>
                           <button 
-                            onClick={() => setSoalMaterials([...soalMaterials, { topic: '', level: 'Menengah' }])}
+                            onClick={() => setSoalMaterials([...soalMaterials, { topic: '', level: 'Menengah', bloom: 'C2' }])}
                             className="p-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
                             title="Tambah Materi"
                           >
@@ -1030,11 +1290,27 @@ export default function App() {
                                   newM[idx].level = e.target.value as any;
                                   setSoalMaterials(newM);
                                 }}
-                                className="p-2 border rounded-lg text-[10px] font-bold bg-white w-24"
+                                className="p-2 border rounded-lg text-[10px] font-bold bg-white w-20"
                               >
                                 <option value="Mudah">Mudah</option>
                                 <option value="Menengah">Menengah</option>
                                 <option value="HOTS">HOTS</option>
+                              </select>
+                              <select 
+                                value={m.bloom} 
+                                onChange={e => {
+                                  const newM = [...soalMaterials];
+                                  newM[idx].bloom = e.target.value;
+                                  setSoalMaterials(newM);
+                                }}
+                                className="p-2 border rounded-lg text-[10px] font-bold bg-white w-24"
+                              >
+                                <option value="C1">C1 (Mengingat)</option>
+                                <option value="C2">C2 (Memahami)</option>
+                                <option value="C3">C3 (Menerapkan)</option>
+                                <option value="C4">C4 (Menganalisis)</option>
+                                <option value="C5">C5 (Mengevaluasi)</option>
+                                <option value="C6">C6 (Mencipta)</option>
                               </select>
                               {soalMaterials.length > 1 && (
                                 <button 
@@ -1129,10 +1405,15 @@ export default function App() {
               <button onClick={() => setActiveTab('instrumen')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'instrumen' ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Rubrik</button>
               <button onClick={() => setActiveTab('evaluasi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'evaluasi' ? 'bg-orange-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><FileText size={12}/> Evaluasi</button>
               <button onClick={() => setActiveTab('kisi_kisi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'kisi_kisi' ? 'bg-cyan-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Kisi-kisi</button>
+              <button onClick={() => setActiveTab('prota')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'prota' ? 'bg-rose-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Calendar size={12}/> Prota</button>
+              <button onClick={() => setActiveTab('prosem')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'prosem' ? 'bg-teal-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><RefreshCw size={12}/> Prosem</button>
               
               <div className="h-8 w-px bg-slate-200 mx-2 hidden lg:block"></div>
               
               <div className="flex gap-1">
+                <button onClick={() => setIsEditMode(!isEditMode)} className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                  {isEditMode ? <Save size={12}/> : <Edit3 size={12}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
+                </button>
                 <button onClick={handleExportPDF} disabled={isPdfLoading} className="bg-red-600 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-red-700 transition-all disabled:opacity-50">
                   {isPdfLoading ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>} PDF
                 </button>
@@ -1157,6 +1438,9 @@ export default function App() {
               <div className="h-8 w-px bg-slate-200 mx-2 hidden lg:block"></div>
               
               <div className="flex gap-1">
+                <button onClick={() => setIsEditMode(!isEditMode)} className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                  {isEditMode ? <Save size={12}/> : <Edit3 size={12}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
+                </button>
                 <button onClick={handleExportPDF} disabled={isPdfLoading} className="bg-red-600 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-red-700 transition-all disabled:opacity-50">
                   {isPdfLoading ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>} PDF
                 </button>
@@ -1173,6 +1457,9 @@ export default function App() {
           {/* EXPORT BAR FOR PROTA/PROSEM */}
           {result && !isExportingMode && (mainTab === 'prota' || mainTab === 'prosem') && (
             <div className="flex justify-center bg-white p-3 rounded-2xl shadow-lg border border-slate-200 sticky top-4 z-50 gap-2">
+              <button onClick={() => setIsEditMode(!isEditMode)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                {isEditMode ? <Save size={14}/> : <Edit3 size={14}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
+              </button>
               <button onClick={handleExportPDF} disabled={isPdfLoading} className="bg-red-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-red-700 transition-all disabled:opacity-50 shadow-md">
                 {isPdfLoading ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>} Unduh PDF
               </button>
@@ -1189,10 +1476,12 @@ export default function App() {
           {result && mainTab !== 'konsultasi' && (
             <div ref={exportAreaRef}
                  id="export-area"
-                 className={`bg-white text-black font-serif transition-all ${isExportingMode ? 'p-0 shadow-none border-none' : 'p-10 shadow-2xl border border-slate-300 mb-20'}`} 
+                 contentEditable={isEditMode}
+                 suppressContentEditableWarning={true}
+                 className={`bg-white text-black font-serif transition-all ${isExportingMode ? 'p-0 shadow-none border-none' : 'p-10 shadow-2xl border border-slate-300 mb-20'} ${isEditMode ? 'outline-2 outline-dashed outline-amber-400 cursor-text' : ''}`} 
                  style={{ 
-                   width: isExportingMode ? '190mm' : 'auto', 
-                   maxWidth: isExportingMode ? '190mm' : '210mm',
+                   width: isExportingMode ? (activeTab === 'prosem' ? '277mm' : '190mm') : 'auto', 
+                   maxWidth: isExportingMode ? (activeTab === 'prosem' ? '277mm' : '190mm') : (activeTab === 'prosem' ? '297mm' : '210mm'),
                    fontSize: '11px', 
                    boxSizing: 'border-box',
                    height: 'auto',
@@ -1474,6 +1763,7 @@ export default function App() {
                                   <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>Materi</td>
                                   <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>Indikator Soal</td>
                                   <td className="p-2 border border-black w-16 text-center" style={{ border: '1pt solid black' }}>Level</td>
+                                  <td className="p-2 border border-black w-16 text-center" style={{ border: '1pt solid black' }}>Bloom</td>
                                   <td className="p-2 border border-black w-20 text-center" style={{ border: '1pt solid black' }}>Bentuk</td>
                                 </tr>
                               </thead>
@@ -1484,6 +1774,7 @@ export default function App() {
                                     <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>{row.materi}</td>
                                     <td className="p-2 border border-black" style={{ border: '1pt solid black' }}>{row.indikator}</td>
                                     <td className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>{row.level}</td>
+                                    <td className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>{row.bloom}</td>
                                     <td className="p-2 border border-black text-center" style={{ border: '1pt solid black' }}>{row.bentukSoal}</td>
                                   </tr>
                                 ))}
