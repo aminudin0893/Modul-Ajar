@@ -8,6 +8,38 @@ import {
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
+// --- COMPONENTS ---
+const MindmapNode = ({ node, depth = 0 }: { node: any, depth?: number }) => {
+  const [isOpen, setIsOpen] = useState(depth < 1);
+
+  return (
+    <div className={`mt-2`} style={{ marginLeft: depth > 0 ? '20px' : '0' }}>
+      <div 
+        onClick={() => setIsOpen(!isOpen)}
+        className={`cursor-pointer p-3 rounded-xl border-2 transition-all flex items-center gap-2 ${
+          depth === 0 ? 'bg-purple-600 text-white border-purple-700 shadow-md' :
+          depth === 1 ? 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100' :
+          'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+        }`}
+      >
+        {node.children && node.children.length > 0 ? (
+          <span className="shrink-0">{isOpen ? <Minus size={14}/> : <Plus size={14}/>}</span>
+        ) : (
+          <span className="w-[14px] shrink-0"></span>
+        )}
+        <span className="font-bold text-sm">{node.label}</span>
+      </div>
+      {isOpen && node.children && node.children.length > 0 && (
+        <div className="border-l-2 border-slate-200 ml-5 pl-4 space-y-2 mt-2">
+          {node.children.map((child: any, idx: number) => (
+            <MindmapNode key={idx} node={child} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // --- TYPES ---
 interface ResultData {
   identifikasi: { pesertaDidik: string; materi: string; dimensiProfil: string };
@@ -27,6 +59,15 @@ interface ResultData {
   kisiKisi: Array<{ no: number; materi: string; indikator: string; level: string; bloom: string; bentukSoal: string }>;
   prota: Array<{ semester: string; materi: string; alokasiWaktu: string }>;
   prosem: Array<{ materi: string; alokasiWaktu: string; jadwal: string[] }>;
+  mindmap: {
+    label: string;
+    children: Array<{
+      label: string;
+      children?: Array<{
+        label: string;
+      }>;
+    }>;
+  };
   tekaTekiSilang: {
     mendatar: Array<{ nomor: number; pertanyaan: string; jawaban: string }>;
     menurun: Array<{ nomor: number; pertanyaan: string; jawaban: string }>;
@@ -457,6 +498,7 @@ export default function App() {
         9. Program Semester (Prosem): Buat rencana program semester (6 bulan) yang mencakup materi pokok, alokasi waktu, dan jadwal bulanan. Sesuaikan dengan jumlah pekan efektif yang diberikan. ${calendarInfo}
         10. Integrasikan nilai-nilai keislaman dan kemuhammadiyahan dalam bagian Kurikulum Berbasis Cinta (KBC).
         11. Tambahkan bagian "tekaTekiSilang" yang berisi ${ttsMode === 'full' ? 'minimal 5 pertanyaan mendatar dan 5 pertanyaan menurun' : 'minimal 10 pertanyaan mendatar saja (kosongkan bagian menurun)'} yang relevan dengan materi.
+        12. Tambahkan bagian "mindmap" yang berisi struktur hierarkis materi (Root -> Sub-materi -> Sub-sub materi) untuk mempermudah visualisasi pengajaran.
         Jawab dalam format JSON murni sesuai schema.`;
     } else if (mainTab === 'prota') {
       prompt = `Buat PROGRAM TAHUNAN (PROTA) Profesional Kurikulum Merdeka Fase D (SMP) untuk ${kelas}, Mata Pelajaran: ${displaySubject}.
@@ -584,9 +626,33 @@ export default function App() {
                     items: { type: Type.OBJECT, properties: { nomor: { type: Type.NUMBER }, pertanyaan: { type: Type.STRING }, jawaban: { type: Type.STRING } } }
                   }
                 }
+              },
+              mindmap: {
+                type: Type.OBJECT,
+                properties: {
+                  label: { type: Type.STRING },
+                  children: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        label: { type: Type.STRING },
+                        children: {
+                          type: Type.ARRAY,
+                          items: {
+                            type: Type.OBJECT,
+                            properties: {
+                              label: { type: Type.STRING }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
               }
             },
-            required: ["identifikasi", "kurikulumCinta", "desainPembelajaran", "pengalamanBelajar", "asesmen", "materiLengkap", "lkpdIndividu", "lkpdKelompok", "penugasanIndividu", "rubrikPenilaian", "evaluasi", "kisiKisi", "prota", "prosem", "tekaTekiSilang"]
+            required: ["identifikasi", "kurikulumCinta", "desainPembelajaran", "pengalamanBelajar", "asesmen", "materiLengkap", "lkpdIndividu", "lkpdKelompok", "penugasanIndividu", "rubrikPenilaian", "evaluasi", "kisiKisi", "prota", "prosem", "tekaTekiSilang", "mindmap"]
           }
         }
       });
@@ -722,6 +788,7 @@ export default function App() {
       case 'prota': return 'PROGRAM TAHUNAN (PROTA)';
       case 'prosem': return 'PROGRAM SEMESTER (PROSEM)';
       case 'tts': return 'TEKA-TEKI SILANG (TTS) MATERI';
+      case 'mindmap': return 'AI MINDMAP BAGAN MATERI';
       default: return 'RENCANA PELAKSANAAN PEMBELAJARAN';
     }
   };
@@ -1439,6 +1506,7 @@ export default function App() {
               <button onClick={() => setActiveTab('kisi_kisi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'kisi_kisi' ? 'bg-cyan-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Kisi-kisi</button>
               <button onClick={() => setActiveTab('prota')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'prota' ? 'bg-rose-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Calendar size={12}/> Prota</button>
               <button onClick={() => setActiveTab('prosem')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'prosem' ? 'bg-teal-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><RefreshCw size={12}/> Prosem</button>
+              <button onClick={() => setActiveTab('mindmap')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'mindmap' ? 'bg-purple-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Sparkles size={12}/> Mindmap</button>
               
               <div className="h-8 w-px bg-slate-200 mx-2 hidden lg:block"></div>
               
@@ -1924,6 +1992,31 @@ export default function App() {
                                   </div>
                                 </div>
                               )}
+                            </div>
+                          ) : activeTab === 'mindmap' ? (
+                            <div className="space-y-6 p-4">
+                              <div className="flex justify-between items-center no-print mb-4">
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                  <Sparkles className="text-purple-600" size={20}/> AI Mindmap Bagan
+                                </h3>
+                                {!isExportingMode && (
+                                  <button onClick={handleExportPDF} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-purple-700 transition-colors shadow-md">
+                                    <Download size={14}/> Unduh Mindmap (PDF)
+                                  </button>
+                                )}
+                              </div>
+                              
+                              <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-200 shadow-inner">
+                                {result.mindmap ? (
+                                  <MindmapNode node={result.mindmap} />
+                                ) : (
+                                  <div className="text-center py-10 text-slate-500 italic">Data mindmap tidak tersedia.</div>
+                                )}
+                              </div>
+                              
+                              <div className="mt-8 p-4 bg-blue-50 rounded-xl border border-blue-100 text-[11px] text-blue-800 italic">
+                                * Klik pada kotak materi untuk membuka atau menutup sub-materi yang berkaitan.
+                              </div>
                             </div>
                           ) : (
                             <div className="text-[12px] leading-relaxed">
