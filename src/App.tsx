@@ -4,7 +4,7 @@ import {
   MapPin, Calendar, School, UserCheck, AlertTriangle, RefreshCw,
   Maximize2, FileText, Layout, Users, User, ClipboardList, PenTool, FileType, Eye, EyeOff, Copy,
   CheckCircle2, Printer, Upload, Trash2, MessageSquare, Plus, Minus,
-  Send, Smile, Paperclip, Edit3, Save
+  Send, Smile, Paperclip, Edit3, Save, X
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -53,8 +53,8 @@ interface ResultData {
   penugasanIndividu: { judul: string; instruksi: string };
   rubrikPenilaian: Array<{ kriteria: string; sangatBaik: string; baik: string; cukup: string; perluBimbingan: string }>;
   evaluasi: {
-    pilgan: Array<{ soal: string; a: string; b: string; c: string; d: string; kunci: string }>;
-    essay: Array<{ soal: string; kunci: string }>;
+    pilgan: Array<{ soal: string; a: string; b: string; c: string; d: string; kunci: string; image?: string }>;
+    essay: Array<{ soal: string; kunci: string; image?: string }>;
   };
   kisiKisi: Array<{ no: number; materi: string; indikator: string; level: string; bloom: string; bentukSoal: string }>;
   prota: Array<{ semester: string; materi: string; alokasiWaktu: string }>;
@@ -126,6 +126,7 @@ export default function App() {
   const [isGeneratingMateri, setIsGeneratingMateri] = useState(false);
   const [isChatMaximized, setIsChatMaximized] = useState(false);
   const [isChatMinimized, setIsChatMinimized] = useState(false);
+  const [includeDalil, setIncludeDalil] = useState(true);
   
   // --- STATE KALENDER PENDIDIKAN ---
   const [showCalendar, setShowCalendar] = useState(false);
@@ -486,11 +487,11 @@ export default function App() {
         ${(displaySubject.toLowerCase().includes('al-islam') || displaySubject.toLowerCase().includes('agama islam')) ? 
           `KHUSUS untuk mata pelajaran ${displaySubject}, struktur "materiLengkap" HARUS mencakup: 
           - Pengertian
-          - Dalil (Wajib mencakup ayat Al-Qur'an dan Hadits yang relevan, sertakan teks Arab asli beserta terjemahannya)
+          ${includeDalil ? '- Dalil (Wajib mencakup ayat Al-Qur\'an dan Hadits yang relevan, sertakan teks Arab asli beserta terjemahannya)' : ''}
           - Hukum (jika ada kaitannya dengan materi)
           - Hikmah.
           Pastikan setiap sub-bab ini diisi secara lengkap, mendalam, dan bebas dari kesalahan pengetikan (typo).` : 
-          `Untuk mata pelajaran ${displaySubject}, sesuaikan struktur "materiLengkap" agar mencakup konsep-konsep kunci secara lengkap, sistematis, mendalam, dan bebas dari kesalahan pengetikan (typo).`
+          `Untuk mata pelajaran ${displaySubject}, sesuaikan struktur "materiLengkap" agar mencakup konsep-konsep kunci secara lengkap, sistematis, mendalam, dan bebas dari kesalahan pengetikan (typo). ${includeDalil ? 'Sertakan ayat Al-Qur\'an atau Hadits yang relevan jika memungkinkan.' : 'Jangan sertakan ayat Al-Qur\'an atau Hadits dalam teks materi.'}`
         }
         6. Evaluasi: ${numPilgan} Pilihan Ganda (A-D) dan ${numEssay} Essay berbobot tinggi.
         7. Kisi-kisi Soal: Buat tabel kisi-kisi soal yang mencakup nomor, materi, indikator soal, level kognitif (L1/L2/L3), Taksonomi Bloom (C1-C6), dan bentuk soal.
@@ -570,11 +571,11 @@ export default function App() {
                 properties: {
                   pilgan: {
                     type: Type.ARRAY,
-                    items: { type: Type.OBJECT, properties: { soal: { type: Type.STRING }, a: { type: Type.STRING }, b: { type: Type.STRING }, c: { type: Type.STRING }, d: { type: Type.STRING }, kunci: { type: Type.STRING } } }
+                    items: { type: Type.OBJECT, properties: { soal: { type: Type.STRING }, a: { type: Type.STRING }, b: { type: Type.STRING }, c: { type: Type.STRING }, d: { type: Type.STRING }, kunci: { type: Type.STRING }, image: { type: Type.STRING, description: "Optional image URL or base64" } } }
                   },
                   essay: {
                     type: Type.ARRAY,
-                    items: { type: Type.OBJECT, properties: { soal: { type: Type.STRING }, kunci: { type: Type.STRING } } }
+                    items: { type: Type.OBJECT, properties: { soal: { type: Type.STRING }, kunci: { type: Type.STRING }, image: { type: Type.STRING, description: "Optional image URL or base64" } } }
                   }
                 }
               },
@@ -758,6 +759,53 @@ export default function App() {
         setIsExportingMode(false);
       });
     }, 500);
+  };
+
+  const handleGenerateImage = async (prompt: string, index: number, type: 'pilgan' | 'essay') => {
+    if (!result) return;
+    
+    const apiKeyToUse = userApiKey || process.env.GEMINI_API_KEY || "";
+    if (!apiKeyToUse) {
+      setError("Kode aplikasi tidak ditemukan. Silakan masukkan kode pembelian anda di panel pengaturan.");
+      return;
+    }
+
+    setIsGeneratingMateri(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: apiKeyToUse });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: {
+          parts: [{ text: `Generate a high-quality educational illustration for this school question: "${prompt}". Style: clean, professional, educational illustration, no text in image.` }],
+        },
+        config: {
+          imageConfig: { aspectRatio: "1:1" }
+        }
+      });
+
+      let imageUrl = "";
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          imageUrl = `data:image/png;base64,${part.inlineData.data}`;
+          break;
+        }
+      }
+
+      if (imageUrl) {
+        const newResult = { ...result };
+        if (type === 'pilgan') {
+          newResult.evaluasi.pilgan[index].image = imageUrl;
+        } else {
+          newResult.evaluasi.essay[index].image = imageUrl;
+        }
+        setResult(newResult);
+      }
+    } catch (err) {
+      console.error("Image Generation Error:", err);
+      setError("Gagal menghasilkan gambar. Silakan coba lagi.");
+    } finally {
+      setIsGeneratingMateri(false);
+    }
   };
 
   const exportToWord = (ext: string) => {
@@ -1153,6 +1201,22 @@ export default function App() {
                         <option value="IPA (Sains)">IPA (Sains)</option>
                         <option value="manual">Tulis Mapel Lainnya...</option>
                     </select>
+
+                    {mainTab === 'modul' && (
+                      <div className="flex items-center justify-between p-2 bg-white border rounded-lg shadow-sm">
+                        <div className="flex items-center gap-2">
+                          <Sparkles size={14} className="text-blue-600" />
+                          <span className="text-[11px] font-bold text-slate-600">Sertakan Ayat Al-Qur'an / Hadits</span>
+                        </div>
+                        <button 
+                          onClick={() => setIncludeDalil(!includeDalil)}
+                          className={`w-10 h-5 rounded-full transition-all relative ${includeDalil ? 'bg-blue-600' : 'bg-slate-300'}`}
+                        >
+                          <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${includeDalil ? 'left-6' : 'left-1'}`}></div>
+                        </button>
+                      </div>
+                    )}
+                    
                     {isCustomSubject && <input type="text" value={customSubject} onChange={e => setCustomSubject(e.target.value)} placeholder="Ketik Nama Mata Pelajaran..." className="w-full p-2 border rounded font-bold bg-emerald-50 border-emerald-200" />}
                     
                     <div className="grid grid-cols-2 gap-2">
@@ -1781,10 +1845,36 @@ export default function App() {
                         <div className="space-y-4">
                           {result.evaluasi.pilgan.map((item, idx) => (
                             <div key={idx} className="mb-4 section-block" style={{ pageBreakInside: 'avoid' }}>
-                              <div className="font-bold text-[12px] mb-1 flex gap-2">
+                              <div className="font-bold text-[12px] mb-1 flex gap-2 items-start">
                                 <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
-                                <span>{item.soal}</span>
+                                <span className="flex-1">{item.soal}</span>
+                                {isEditMode && (
+                                  <button 
+                                    onClick={() => handleGenerateImage(item.soal, idx, 'pilgan')}
+                                    className="p-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-all no-print shrink-0"
+                                    title="Generate Gambar"
+                                  >
+                                    <ImageIcon size={12} />
+                                  </button>
+                                )}
                               </div>
+                              {item.image && (
+                                <div className="my-2 flex justify-center relative group">
+                                  <img src={item.image} alt="Ilustrasi Soal" className="max-w-[200px] border border-slate-200 rounded shadow-sm" referrerPolicy="no-referrer" />
+                                  {isEditMode && (
+                                    <button 
+                                      onClick={() => {
+                                        const newRes = {...result};
+                                        delete newRes.evaluasi.pilgan[idx].image;
+                                        setResult(newRes);
+                                      }}
+                                      className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <X size={10} />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                               <div className="grid grid-cols-2 gap-x-10 pl-5 text-[11px]">
                                 <div className="flex gap-1"><span className="shrink-0">A.</span><span>{item.a}</span></div>
                                 <div className="flex gap-1"><span className="shrink-0">C.</span><span>{item.c}</span></div>
@@ -1802,10 +1892,36 @@ export default function App() {
                         <div className="space-y-8">
                           {result.evaluasi.essay.map((item, idx) => (
                             <div key={idx} className="mb-6 section-block" style={{ pageBreakInside: 'avoid' }}>
-                              <div className="font-bold text-[12px] mb-2 flex gap-2">
+                              <div className="font-bold text-[12px] mb-2 flex gap-2 items-start">
                                 <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
-                                <span>{item.soal}</span>
+                                <span className="flex-1">{item.soal}</span>
+                                {isEditMode && (
+                                  <button 
+                                    onClick={() => handleGenerateImage(item.soal, idx, 'essay')}
+                                    className="p-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-all no-print shrink-0"
+                                    title="Generate Gambar"
+                                  >
+                                    <ImageIcon size={12} />
+                                  </button>
+                                )}
                               </div>
+                              {item.image && (
+                                <div className="my-2 flex justify-center relative group">
+                                  <img src={item.image} alt="Ilustrasi Soal" className="max-w-[200px] border border-slate-200 rounded shadow-sm" referrerPolicy="no-referrer" />
+                                  {isEditMode && (
+                                    <button 
+                                      onClick={() => {
+                                        const newRes = {...result};
+                                        delete newRes.evaluasi.essay[idx].image;
+                                        setResult(newRes);
+                                      }}
+                                      className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <X size={10} />
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                               <div className="h-24 border border-slate-400 mt-2 mb-2 w-full"></div>
                               {showAnswers && <div className="text-blue-800 text-[11px] font-bold italic bg-blue-50 p-2 rounded">Pedoman Jawaban: {item.kunci}</div>}
                             </div>
