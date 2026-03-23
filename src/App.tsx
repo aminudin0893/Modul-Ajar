@@ -1271,21 +1271,6 @@ export default function App() {
                         <option value="manual">Tulis Mapel Lainnya...</option>
                     </select>
 
-                    {mainTab === 'modul' && (
-                      <div className="flex items-center justify-between p-2 bg-white border rounded-lg shadow-sm">
-                        <div className="flex items-center gap-2">
-                          <Sparkles size={14} className="text-blue-600" />
-                          <span className="text-[11px] font-bold text-slate-600">Sertakan Ayat Al-Qur'an / Hadits</span>
-                        </div>
-                        <button 
-                          onClick={() => setIncludeDalil(!includeDalil)}
-                          className={`w-10 h-5 rounded-full transition-all relative ${includeDalil ? 'bg-blue-600' : 'bg-slate-300'}`}
-                        >
-                          <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${includeDalil ? 'left-6' : 'left-1'}`}></div>
-                        </button>
-                      </div>
-                    )}
-                    
                     {isCustomSubject && <input type="text" value={customSubject} onChange={e => setCustomSubject(e.target.value)} placeholder="Ketik Nama Mata Pelajaran..." className="w-full p-2 border rounded font-bold bg-emerald-50 border-emerald-200" />}
                     
                     <div className="grid grid-cols-2 gap-2">
@@ -1556,13 +1541,21 @@ export default function App() {
                           ))}
                         </div>
                         
-                        <div className="flex items-center gap-4 pt-2">
+                         <div className="flex items-center gap-4 pt-2">
                           <label className="flex items-center gap-2 cursor-pointer group">
                             <div className={`w-10 h-5 rounded-full transition-all relative ${noEssayMode ? 'bg-blue-600' : 'bg-slate-300'}`}>
                               <input type="checkbox" checked={noEssayMode} onChange={e => setNoEssayMode(e.target.checked)} className="hidden" />
                               <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${noEssayMode ? 'left-6' : 'left-1'}`}></div>
                             </div>
                             <span className="text-[10px] font-black text-slate-500 uppercase group-hover:text-blue-600">Mode Tanpa Essay</span>
+                          </label>
+
+                          <label className="flex items-center gap-2 cursor-pointer group">
+                            <div className={`w-10 h-5 rounded-full transition-all relative ${includeDalil ? 'bg-blue-600' : 'bg-slate-300'}`}>
+                              <input type="checkbox" checked={includeDalil} onChange={e => setIncludeDalil(e.target.checked)} className="hidden" />
+                              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${includeDalil ? 'left-6' : 'left-1'}`}></div>
+                            </div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase group-hover:text-blue-600">Sertakan Ayat/Hadits</span>
                           </label>
                         </div>
                       </div>
@@ -2259,8 +2252,8 @@ export default function App() {
                                       isLibraryReady ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                                     }`}
                                   >
-                                    {isLibraryReady ? <Download size={14}/> : <Loader2 size={14} className="animate-spin"/>}
-                                    {isLibraryReady ? 'Unduh Mindmap (PDF)' : 'Menyiapkan...'}
+                                    {isLibraryReady ? <Printer size={14}/> : <Loader2 size={14} className="animate-spin"/>}
+                                    {isLibraryReady ? 'Cetak Mindmap' : 'Menyiapkan...'}
                                   </button>
                                 )}
                               </div>
