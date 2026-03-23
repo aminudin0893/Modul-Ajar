@@ -2255,7 +2255,7 @@ export default function App() {
                                     }`}
                                   >
                                     {isLibraryReady ? <Printer size={14}/> : <Loader2 size={14} className="animate-spin"/>}
-                                    {isLibraryReady ? 'Cetak Mindmap' : 'Menyiapkan...'}
+                                    {isLibraryReady ? 'Print Mindmap' : 'Menyiapkan...'}
                                   </button>
                                 )}
                               </div>
