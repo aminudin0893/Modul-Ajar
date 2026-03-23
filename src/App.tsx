@@ -10,7 +10,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 // --- COMPONENTS ---
 const MindmapNode = ({ node, depth = 0, isExportingMode = false }: { node: any, depth?: number, isExportingMode?: boolean }) => {
-  const [isOpen, setIsOpen] = useState(depth < 1);
+  const [isOpen, setIsOpen] = useState(depth < 2); // Open first two levels by default
 
   useEffect(() => {
     if (isExportingMode) {
@@ -18,32 +18,58 @@ const MindmapNode = ({ node, depth = 0, isExportingMode = false }: { node: any, 
     }
   }, [isExportingMode]);
 
+  const getDepthStyles = (d: number) => {
+    switch(d) {
+      case 0: return 'bg-purple-600 text-white border-purple-700 shadow-lg ring-4 ring-purple-100';
+      case 1: return 'bg-blue-600 text-white border-blue-700 shadow-md';
+      case 2: return 'bg-white border-blue-200 text-blue-800 hover:border-blue-400 shadow-sm';
+      default: return 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300';
+    }
+  };
+
   return (
-    <div className={`mt-2`} style={{ marginLeft: depth > 0 ? '20px' : '0' }}>
-      <div 
-        onClick={() => !isExportingMode && setIsOpen(!isOpen)}
-        className={`p-3 rounded-xl border-2 transition-all flex items-center gap-2 ${
-          isExportingMode ? 'cursor-default' : 'cursor-pointer'
-        } ${
-          depth === 0 ? 'bg-purple-600 text-white border-purple-700 shadow-md' :
-          depth === 1 ? 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100' :
-          'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-        }`}
-      >
-        {node.children && node.children.length > 0 ? (
-          <span className="shrink-0">{isOpen ? <Minus size={14}/> : <Plus size={14}/>}</span>
-        ) : (
-          <span className="w-[14px] shrink-0"></span>
-        )}
-        <span className="font-bold text-sm">{node.label}</span>
-      </div>
-      {isOpen && node.children && node.children.length > 0 && (
-        <div className="border-l-2 border-slate-200 ml-5 pl-4 space-y-2 mt-2">
-          {node.children.map((child: any, idx: number) => (
-            <MindmapNode key={idx} node={child} depth={depth + 1} isExportingMode={isExportingMode} />
-          ))}
-        </div>
+    <div className="relative" style={{ marginLeft: depth > 0 ? (window.innerWidth < 640 ? '12px' : '24px') : '0' }}>
+      {/* Vertical line for hierarchy */}
+      {depth > 0 && (
+        <div className="absolute -left-3 top-0 bottom-0 w-px bg-slate-200 sm:-left-6"></div>
       )}
+      
+      <div className="flex items-start gap-2 group">
+        {/* Horizontal line connector */}
+        {depth > 0 && (
+          <div className="w-3 h-px bg-slate-200 mt-5 sm:w-6"></div>
+        )}
+        
+        <div className="flex-1 mt-2">
+          <div 
+            onClick={() => !isExportingMode && setIsOpen(!isOpen)}
+            className={`p-3 rounded-xl border-2 transition-all duration-200 flex items-center gap-3 ${
+              isExportingMode ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
+            } ${getDepthStyles(depth)}`}
+          >
+            {node.children && node.children.length > 0 ? (
+              <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                depth < 2 ? 'bg-white/20' : 'bg-slate-100'
+              }`}>
+                {isOpen ? <Minus size={12}/> : <Plus size={12}/>}
+              </div>
+            ) : (
+              <div className="w-5 shrink-0"></div>
+            )}
+            <span className={`font-bold leading-tight ${depth === 0 ? 'text-base' : 'text-sm'}`}>
+              {node.label}
+            </span>
+          </div>
+
+          {isOpen && node.children && node.children.length > 0 && (
+            <div className="space-y-1">
+              {node.children.map((child: any, idx: number) => (
+                <MindmapNode key={idx} node={child} depth={depth + 1} isExportingMode={isExportingMode} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -2250,44 +2276,65 @@ export default function App() {
                               )}
                             </div>
                           ) : activeTab === 'mindmap' ? (
-                            <div className="space-y-6 p-4">
-                              <div className="flex justify-between items-center no-print mb-4">
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                  <Sparkles className="text-purple-600" size={20}/> AI Mindmap Bagan
-                                </h3>
+                            <div className="space-y-6 p-2 sm:p-6">
+                              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center no-print gap-4 mb-6">
+                                <div>
+                                  <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                    <div className="p-2 bg-purple-100 rounded-lg">
+                                      <Sparkles className="text-purple-600" size={24}/>
+                                    </div>
+                                    AI Mindmap Bagan
+                                  </h3>
+                                  <p className="text-xs text-slate-500 mt-1 ml-12">Struktur materi pembelajaran yang terorganisir</p>
+                                </div>
+                                
                                 {!isExportingMode && (
-                                  <div className="flex flex-wrap gap-2">
+                                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                                     <button 
                                       onClick={handleExportPDF} 
                                       disabled={!isLibraryReady}
-                                      className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
-                                        isLibraryReady ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                      className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95 ${
+                                        isLibraryReady ? 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                                       }`}
                                     >
-                                      {isLibraryReady ? <Download size={14}/> : <Loader2 size={14} className="animate-spin"/>}
+                                      {isLibraryReady ? <Download size={16}/> : <Loader2 size={16} className="animate-spin"/>}
                                       {isLibraryReady ? 'Export PDF' : 'Menyiapkan...'}
                                     </button>
                                     <button 
                                       onClick={handlePrintPage} 
-                                      className="px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md bg-purple-600 text-white hover:bg-purple-700"
+                                      className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm bg-purple-600 text-white hover:bg-purple-700 hover:shadow-md active:scale-95"
                                     >
-                                      <Printer size={14}/>
-                                      Cetak Langsung (Print)
+                                      <Printer size={16}/>
+                                      Cetak Langsung
                                     </button>
                                   </div>
                                 )}
                               </div>
                               
-                              <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-200 shadow-inner">
-                                {result.mindmap ? (
-                                  <MindmapNode node={result.mindmap} isExportingMode={isExportingMode} />
-                                ) : (
-                                  <div className="text-center py-10 text-slate-500 italic">Data mindmap tidak tersedia.</div>
-                                )}
+                              <div className="bg-white p-4 sm:p-10 rounded-[2rem] border-2 border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden relative">
+                                {/* Decorative background elements */}
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-purple-50 rounded-full -mr-32 -mt-32 blur-3xl opacity-50"></div>
+                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-50 rounded-full -ml-32 -mb-32 blur-3xl opacity-50"></div>
+                                
+                                <div className="relative z-10">
+                                  {result.mindmap ? (
+                                    <MindmapNode node={result.mindmap} isExportingMode={isExportingMode} />
+                                  ) : (
+                                    <div className="text-center py-20 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                                      <Layout className="mx-auto text-slate-300 mb-4" size={48}/>
+                                      <p className="text-slate-500 font-medium italic">Data mindmap tidak tersedia.</p>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               
-                              <div className="mt-8 p-4 bg-blue-50 rounded-xl border border-blue-100 text-[11px] text-blue-800 italic no-print">
-                                * Klik pada kotak materi untuk membuka atau menutup sub-materi yang berkaitan.
+                              <div className="mt-8 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 text-xs text-blue-800 flex items-start gap-3 no-print">
+                                <div className="p-1.5 bg-blue-100 rounded-lg shrink-0">
+                                  <Eye size={14}/>
+                                </div>
+                                <p className="leading-relaxed">
+                                  <strong>Tips Visualisasi:</strong> Klik pada kotak materi untuk membuka atau menutup sub-materi. Gunakan fitur <strong>Cetak Langsung</strong> untuk hasil fisik terbaik.
+                                </p>
                               </div>
                             </div>
                           ) : (
