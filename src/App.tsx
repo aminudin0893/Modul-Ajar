@@ -10,13 +10,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 // --- COMPONENTS ---
 const MindmapNode = ({ node, depth = 0, isExportingMode = false }: { node: any, depth?: number, isExportingMode?: boolean }) => {
-  const [isOpen, setIsOpen] = useState(depth < 2); // Open first two levels by default
-
-  useEffect(() => {
-    if (isExportingMode) {
-      setIsOpen(true);
-    }
-  }, [isExportingMode]);
+  const [isExpanded, setIsExpanded] = useState(depth < 2);
+  const isOpen = isExportingMode || isExpanded;
 
   const getDepthStyles = (d: number) => {
     switch(d) {
@@ -28,7 +23,7 @@ const MindmapNode = ({ node, depth = 0, isExportingMode = false }: { node: any, 
   };
 
   return (
-    <div className="relative" style={{ marginLeft: depth > 0 ? (window.innerWidth < 640 ? '12px' : '24px') : '0' }}>
+    <div className="relative" style={{ marginLeft: depth > 0 ? (isExportingMode ? '24px' : (window.innerWidth < 640 ? '12px' : '24px')) : '0' }}>
       {/* Vertical line for hierarchy */}
       {depth > 0 && (
         <div className="absolute -left-3 top-0 bottom-0 w-px bg-slate-200 sm:-left-6"></div>
@@ -42,7 +37,7 @@ const MindmapNode = ({ node, depth = 0, isExportingMode = false }: { node: any, 
         
         <div className="flex-1 mt-2">
           <div 
-            onClick={() => !isExportingMode && setIsOpen(!isOpen)}
+            onClick={() => !isExportingMode && setIsExpanded(!isExpanded)}
             className={`p-3 rounded-xl border-2 transition-all duration-200 flex items-center gap-3 ${
               isExportingMode ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
             } ${getDepthStyles(depth)}`}
@@ -737,15 +732,24 @@ export default function App() {
 
   const handlePrintPage = () => {
     if (!result) return;
+    if (isPdfLoading) return;
+
     setIsExportingMode(true);
+    const waitTime = activeTab === 'mindmap' ? 2500 : 800;
+    
     setTimeout(() => {
-      window.print();
-      setIsExportingMode(false);
-    }, 500);
+      try {
+        window.print();
+      } catch (err) {
+        console.error("Print Error:", err);
+      } finally {
+        setIsExportingMode(false);
+      }
+    }, waitTime);
   };
 
   const handleExportPDF = () => {
-    if (!result) return;
+    if (!result || isPdfLoading) return;
     
     // @ts-ignore
     if (!window.html2pdf) {
@@ -756,9 +760,13 @@ export default function App() {
     setIsPdfLoading(true); 
     setIsExportingMode(true);
     
-    const isLandscape = activeTab === 'prosem';
+    const isLandscape = activeTab === 'prosem' || activeTab === 'mindmap';
+    const isMindmap = activeTab === 'mindmap';
     const paperDim = paperFormat === 'a4' ? 'a4' : [210, 330];
     const baseName = mainTab === 'soal' ? examTitle : topic;
+    
+    // Mindmap butuh waktu lebih lama untuk render semua node yang terbuka
+    const waitTime = isMindmap ? 3000 : 1500;
     
     setTimeout(() => {
       try {
@@ -770,20 +778,16 @@ export default function App() {
         }
         
         const opt = {
-          margin: [10, 10, 10, 10], // Margin 1cm keliling
+          margin: [10, 10, 10, 10],
           filename: `${mainTab.toUpperCase()}_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
+          image: { type: 'jpeg', quality: 0.95 },
           html2canvas: { 
-            scale: 3, 
+            scale: isMindmap ? 1.5 : 2.5, // Kurangi scale untuk mindmap agar tidak hang
             useCORS: true, 
             logging: false,
             letterRendering: true,
-            width: isLandscape ? 1050 : 718,
-            windowWidth: isLandscape ? 1050 : 718,
-            x: 0,
-            y: 0,
-            scrollX: 0,
-            scrollY: 0,
+            width: isLandscape ? 1100 : 750,
+            windowWidth: isLandscape ? 1100 : 750,
           },
           jsPDF: { unit: 'mm', format: paperDim, orientation: isLandscape ? 'landscape' : 'portrait', compress: true },
           pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.header-bg', '.section-block'] }
@@ -805,11 +809,11 @@ export default function App() {
         setIsPdfLoading(false);
         setIsExportingMode(false);
       }
-    }, 1200); // Tambahkan sedikit waktu agar mindmap sempat terbuka semua
+    }, waitTime);
   };
 
   const handleExportImage = () => {
-    if (!result) return;
+    if (!result || isPdfLoading) return;
     
     // @ts-ignore
     if (!window.html2canvas) {
@@ -817,22 +821,27 @@ export default function App() {
       return;
     }
 
+    setIsPdfLoading(true);
     setIsExportingMode(true);
+    const isMindmap = activeTab === 'mindmap';
+    const waitTime = isMindmap ? 3000 : 1200;
+
     setTimeout(() => {
       try {
         const element = exportAreaRef.current;
         if (!element) {
+          setIsPdfLoading(false);
           setIsExportingMode(false);
           return;
         }
         
         // @ts-ignore
         window.html2canvas(element, { 
-          scale: 4, 
+          scale: isMindmap ? 2 : 3, // Kurangi scale agar tidak crash memori
           useCORS: true, 
           allowTaint: true,
           backgroundColor: '#ffffff',
-          windowWidth: activeTab === 'prosem' ? 1400 : 1200,
+          windowWidth: activeTab === 'prosem' || isMindmap ? 1400 : 1000,
           onclone: (clonedDoc: Document) => {
             const clonedElement = clonedDoc.getElementById('export-area');
             if (clonedElement) {
@@ -849,20 +858,23 @@ export default function App() {
           const link = document.createElement('a');
           const baseName = mainTab === 'soal' ? examTitle : topic;
           link.download = `IMG_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.jpg`;
-          link.href = canvas.toDataURL("image/jpeg", 0.95);
+          link.href = canvas.toDataURL("image/jpeg", 0.9);
           link.click();
+          setIsPdfLoading(false);
           setIsExportingMode(false);
         }).catch((err: any) => {
           console.error("Image Export Error (Promise):", err);
           alert("Gagal mengekspor gambar. Silakan coba lagi.");
+          setIsPdfLoading(false);
           setIsExportingMode(false);
         });
       } catch (err) {
         console.error("Image Export Error (Catch):", err);
         alert("Terjadi kesalahan saat menyiapkan gambar. Silakan coba lagi.");
+        setIsPdfLoading(false);
         setIsExportingMode(false);
       }
-    }, 1000); // Tambahkan sedikit waktu agar mindmap sempat terbuka semua
+    }, waitTime);
   };
 
   const handleGenerateImage = async (prompt: string, index: number, type: 'pilgan' | 'essay') => {
