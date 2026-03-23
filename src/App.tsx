@@ -1944,10 +1944,10 @@ export default function App() {
       {!isExportingMode && (
         <button 
           onClick={() => window.location.reload()}
-          className="fixed bottom-6 right-6 p-4 bg-slate-800 text-white rounded-full shadow-2xl hover:bg-black transition-all active:scale-90 z-[1000] flex items-center justify-center"
+          className="fixed bottom-6 right-6 p-2.5 bg-slate-800 text-white rounded-full shadow-2xl hover:bg-black transition-all active:scale-90 z-[1000] flex items-center justify-center"
           title="Reload Halaman"
         >
-          <RefreshCw size={24} />
+          <RefreshCw size={16} />
         </button>
       )}
 
