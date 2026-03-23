@@ -2256,13 +2256,25 @@ export default function App() {
                                   <Sparkles className="text-purple-600" size={20}/> AI Mindmap Bagan
                                 </h3>
                                 {!isExportingMode && (
-                                  <button 
-                                    onClick={handlePrintPage} 
-                                    className="px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md bg-purple-600 text-white hover:bg-purple-700"
-                                  >
-                                    <Printer size={14}/>
-                                    Print Mindmap
-                                  </button>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button 
+                                      onClick={handleExportPDF} 
+                                      disabled={!isLibraryReady}
+                                      className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
+                                        isLibraryReady ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                      }`}
+                                    >
+                                      {isLibraryReady ? <Download size={14}/> : <Loader2 size={14} className="animate-spin"/>}
+                                      {isLibraryReady ? 'Export PDF' : 'Menyiapkan...'}
+                                    </button>
+                                    <button 
+                                      onClick={handlePrintPage} 
+                                      className="px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md bg-purple-600 text-white hover:bg-purple-700"
+                                    >
+                                      <Printer size={14}/>
+                                      Cetak Langsung (Print)
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                               
