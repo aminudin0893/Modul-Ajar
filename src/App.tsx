@@ -9,14 +9,22 @@ import {
 import { GoogleGenAI, Type } from "@google/genai";
 
 // --- COMPONENTS ---
-const MindmapNode = ({ node, depth = 0 }: { node: any, depth?: number }) => {
+const MindmapNode = ({ node, depth = 0, isExportingMode = false }: { node: any, depth?: number, isExportingMode?: boolean }) => {
   const [isOpen, setIsOpen] = useState(depth < 1);
+
+  useEffect(() => {
+    if (isExportingMode) {
+      setIsOpen(true);
+    }
+  }, [isExportingMode]);
 
   return (
     <div className={`mt-2`} style={{ marginLeft: depth > 0 ? '20px' : '0' }}>
       <div 
-        onClick={() => setIsOpen(!isOpen)}
-        className={`cursor-pointer p-3 rounded-xl border-2 transition-all flex items-center gap-2 ${
+        onClick={() => !isExportingMode && setIsOpen(!isOpen)}
+        className={`p-3 rounded-xl border-2 transition-all flex items-center gap-2 ${
+          isExportingMode ? 'cursor-default' : 'cursor-pointer'
+        } ${
           depth === 0 ? 'bg-purple-600 text-white border-purple-700 shadow-md' :
           depth === 1 ? 'bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100' :
           'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
@@ -32,7 +40,7 @@ const MindmapNode = ({ node, depth = 0 }: { node: any, depth?: number }) => {
       {isOpen && node.children && node.children.length > 0 && (
         <div className="border-l-2 border-slate-200 ml-5 pl-4 space-y-2 mt-2">
           {node.children.map((child: any, idx: number) => (
-            <MindmapNode key={idx} node={child} depth={depth + 1} />
+            <MindmapNode key={idx} node={child} depth={depth + 1} isExportingMode={isExportingMode} />
           ))}
         </div>
       )}
@@ -103,6 +111,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isExportingMode, setIsExportingMode] = useState(false);
+  const [isLibraryReady, setIsLibraryReady] = useState(false);
   const [showAnswers, setShowAnswers] = useState(false); 
   const [result, setResult] = useState<ResultData | null>(null);
   const [error, setError] = useState('');
@@ -226,13 +235,34 @@ export default function App() {
       { id: 'html2pdf-script', src: 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js' },
       { id: 'html2canvas-script', src: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js' }
     ];
+    
+    let loadedCount = 0;
+    const totalScripts = scripts.length;
+
+    const checkReady = () => {
+      loadedCount++;
+      if (loadedCount === totalScripts) {
+        setIsLibraryReady(true);
+      }
+    };
+
     scripts.forEach(s => {
-      if (!document.getElementById(s.id)) {
+      const existing = document.getElementById(s.id);
+      if (!existing) {
         const script = document.createElement('script');
         script.id = s.id;
         script.src = s.src;
         script.async = true;
+        script.onload = checkReady;
+        script.onerror = () => {
+          console.error(`Gagal memuat script: ${s.src}`);
+          // Tetap hitung agar tidak stuck jika satu gagal, tapi mungkin tampilkan peringatan
+          checkReady();
+        };
         document.body.appendChild(script);
+      } else {
+        // Jika sudah ada, anggap sudah termuat
+        checkReady();
       }
     });
   }, []);
@@ -681,6 +711,13 @@ export default function App() {
 
   const handleExportPDF = () => {
     if (!result) return;
+    
+    // @ts-ignore
+    if (!window.html2pdf) {
+      alert("Library PDF belum siap, silakan tunggu sebentar atau muat ulang halaman.");
+      return;
+    }
+
     setIsPdfLoading(true); 
     setIsExportingMode(true);
     
@@ -689,76 +726,108 @@ export default function App() {
     const baseName = mainTab === 'soal' ? examTitle : topic;
     
     setTimeout(() => {
-      const element = exportAreaRef.current;
-      if (!element) return;
-      
-      const opt = {
-        margin: [10, 10, 10, 10], // Margin 1cm keliling
-        filename: `${mainTab.toUpperCase()}_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 3, 
-          useCORS: true, 
-          logging: false,
-          letterRendering: true,
-          width: isLandscape ? 1050 : 718,
-          windowWidth: isLandscape ? 1050 : 718,
-          x: 0,
-          y: 0,
-          scrollX: 0,
-          scrollY: 0,
-        },
-        jsPDF: { unit: 'mm', format: paperDim, orientation: isLandscape ? 'landscape' : 'portrait', compress: true },
-        pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.header-bg', '.section-block'] }
-      };
-      
-      // @ts-ignore
-      window.html2pdf().set(opt).from(element).save().then(() => {
-        setIsPdfLoading(false); 
-        setIsExportingMode(false);
-      }).catch((err: any) => {
-        console.error("PDF Export Error:", err);
+      try {
+        const element = exportAreaRef.current;
+        if (!element) {
+          setIsPdfLoading(false);
+          setIsExportingMode(false);
+          return;
+        }
+        
+        const opt = {
+          margin: [10, 10, 10, 10], // Margin 1cm keliling
+          filename: `${mainTab.toUpperCase()}_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { 
+            scale: 3, 
+            useCORS: true, 
+            logging: false,
+            letterRendering: true,
+            width: isLandscape ? 1050 : 718,
+            windowWidth: isLandscape ? 1050 : 718,
+            x: 0,
+            y: 0,
+            scrollX: 0,
+            scrollY: 0,
+          },
+          jsPDF: { unit: 'mm', format: paperDim, orientation: isLandscape ? 'landscape' : 'portrait', compress: true },
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.header-bg', '.section-block'] }
+        };
+        
+        // @ts-ignore
+        window.html2pdf().set(opt).from(element).save().then(() => {
+          setIsPdfLoading(false); 
+          setIsExportingMode(false);
+        }).catch((err: any) => {
+          console.error("PDF Export Error (Promise):", err);
+          alert("Gagal mengekspor PDF. Silakan coba lagi.");
+          setIsPdfLoading(false);
+          setIsExportingMode(false);
+        });
+      } catch (err) {
+        console.error("PDF Export Error (Catch):", err);
+        alert("Terjadi kesalahan saat menyiapkan PDF. Silakan coba lagi.");
         setIsPdfLoading(false);
         setIsExportingMode(false);
-      });
-    }, 800);
+      }
+    }, 1200); // Tambahkan sedikit waktu agar mindmap sempat terbuka semua
   };
 
   const handleExportImage = () => {
+    if (!result) return;
+    
     // @ts-ignore
-    if (!result || !window.html2canvas) return;
+    if (!window.html2canvas) {
+      alert("Library Gambar belum siap, silakan tunggu sebentar atau muat ulang halaman.");
+      return;
+    }
+
     setIsExportingMode(true);
     setTimeout(() => {
-      const element = exportAreaRef.current;
-      if (!element) return;
-      // @ts-ignore
-      window.html2canvas(element, { 
-        scale: 4, 
-        useCORS: true, 
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        windowWidth: activeTab === 'prosem' ? 1400 : 1200,
-        onclone: (clonedDoc: Document) => {
-          const clonedElement = clonedDoc.getElementById('export-area');
-          if (clonedElement) {
-            const images = clonedElement.getElementsByTagName('img');
-            for (let i = 0; i < images.length; i++) {
-              images[i].setAttribute('crossOrigin', 'anonymous');
-              const src = images[i].src;
-              images[i].src = '';
-              images[i].src = src;
+      try {
+        const element = exportAreaRef.current;
+        if (!element) {
+          setIsExportingMode(false);
+          return;
+        }
+        
+        // @ts-ignore
+        window.html2canvas(element, { 
+          scale: 4, 
+          useCORS: true, 
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          windowWidth: activeTab === 'prosem' ? 1400 : 1200,
+          onclone: (clonedDoc: Document) => {
+            const clonedElement = clonedDoc.getElementById('export-area');
+            if (clonedElement) {
+              const images = clonedElement.getElementsByTagName('img');
+              for (let i = 0; i < images.length; i++) {
+                images[i].setAttribute('crossOrigin', 'anonymous');
+                const src = images[i].src;
+                images[i].src = '';
+                images[i].src = src;
+              }
             }
           }
-        }
-      }).then(canvas => {
-        const link = document.createElement('a');
-        const baseName = mainTab === 'soal' ? examTitle : topic;
-        link.download = `IMG_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.jpg`;
-        link.href = canvas.toDataURL("image/jpeg", 0.95);
-        link.click();
+        }).then(canvas => {
+          const link = document.createElement('a');
+          const baseName = mainTab === 'soal' ? examTitle : topic;
+          link.download = `IMG_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.jpg`;
+          link.href = canvas.toDataURL("image/jpeg", 0.95);
+          link.click();
+          setIsExportingMode(false);
+        }).catch((err: any) => {
+          console.error("Image Export Error (Promise):", err);
+          alert("Gagal mengekspor gambar. Silakan coba lagi.");
+          setIsExportingMode(false);
+        });
+      } catch (err) {
+        console.error("Image Export Error (Catch):", err);
+        alert("Terjadi kesalahan saat menyiapkan gambar. Silakan coba lagi.");
         setIsExportingMode(false);
-      });
-    }, 500);
+      }
+    }, 1000); // Tambahkan sedikit waktu agar mindmap sempat terbuka semua
   };
 
   const handleGenerateImage = async (prompt: string, index: number, type: 'pilgan' | 'essay') => {
@@ -1578,11 +1647,27 @@ export default function App() {
                 <button onClick={() => setIsEditMode(!isEditMode)} className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
                   {isEditMode ? <Save size={12}/> : <Edit3 size={12}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
                 </button>
-                <button onClick={handleExportPDF} disabled={isPdfLoading} className="bg-red-600 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-red-700 transition-all disabled:opacity-50">
-                  {isPdfLoading ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>} PDF
+                <button 
+                  onClick={handleExportPDF} 
+                  disabled={isPdfLoading || !isLibraryReady} 
+                  className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all disabled:opacity-50 ${
+                    isLibraryReady ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isPdfLoading || !isLibraryReady ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>}
+                  {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'PDF')}
                 </button>
                 <button onClick={() => exportToWord('doc')} className="bg-slate-800 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-black transition-all"><FileType size={12}/> Word</button>
-                <button onClick={handleExportImage} className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-emerald-700 transition-all"><ImageIcon size={12}/> JPG</button>
+                <button 
+                  onClick={handleExportImage} 
+                  disabled={!isLibraryReady}
+                  className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${
+                    isLibraryReady ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                  }`}
+                >
+                  {isLibraryReady ? <ImageIcon size={12}/> : <Loader2 size={12} className="animate-spin"/>}
+                  {isLibraryReady ? 'JPG' : '...'}
+                </button>
               </div>
 
               {(activeTab === 'evaluasi') && (
@@ -1605,11 +1690,27 @@ export default function App() {
                 <button onClick={() => setIsEditMode(!isEditMode)} className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
                   {isEditMode ? <Save size={12}/> : <Edit3 size={12}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
                 </button>
-                <button onClick={handleExportPDF} disabled={isPdfLoading} className="bg-red-600 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-red-700 transition-all disabled:opacity-50">
-                  {isPdfLoading ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>} PDF
+                <button 
+                  onClick={handleExportPDF} 
+                  disabled={isPdfLoading || !isLibraryReady} 
+                  className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all disabled:opacity-50 ${
+                    isLibraryReady ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isPdfLoading || !isLibraryReady ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>}
+                  {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'PDF')}
                 </button>
                 <button onClick={() => exportToWord('doc')} className="bg-slate-800 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-black transition-all"><FileType size={12}/> Word</button>
-                <button onClick={handleExportImage} className="bg-emerald-600 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-emerald-700 transition-all"><ImageIcon size={12}/> JPG</button>
+                <button 
+                  onClick={handleExportImage} 
+                  disabled={!isLibraryReady}
+                  className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${
+                    isLibraryReady ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                  }`}
+                >
+                  {isLibraryReady ? <ImageIcon size={12}/> : <Loader2 size={12} className="animate-spin"/>}
+                  {isLibraryReady ? 'JPG' : '...'}
+                </button>
               </div>
 
               <button onClick={() => setShowAnswers(!showAnswers)} className={`ml-2 px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 border transition-all ${showAnswers ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-300'}`}>
@@ -1624,14 +1725,28 @@ export default function App() {
               <button onClick={() => setIsEditMode(!isEditMode)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
                 {isEditMode ? <Save size={14}/> : <Edit3 size={14}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
               </button>
-              <button onClick={handleExportPDF} disabled={isPdfLoading} className="bg-red-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-red-700 transition-all disabled:opacity-50 shadow-md">
-                {isPdfLoading ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>} Unduh PDF
+              <button 
+                onClick={handleExportPDF} 
+                disabled={isPdfLoading || !isLibraryReady} 
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all disabled:opacity-50 shadow-md ${
+                  isLibraryReady ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
+                {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'Unduh PDF')}
               </button>
               <button onClick={() => exportToWord('doc')} className="bg-slate-800 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-black transition-all shadow-md">
                 <FileType size={14}/> Unduh Word
               </button>
-              <button onClick={handleExportImage} className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-emerald-700 transition-all shadow-md">
-                <ImageIcon size={14}/> Unduh JPG
+              <button 
+                onClick={handleExportImage} 
+                disabled={!isLibraryReady}
+                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all shadow-md ${
+                  isLibraryReady ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                }`}
+              >
+                {isLibraryReady ? <ImageIcon size={14}/> : <Loader2 size={14} className="animate-spin"/>}
+                {isLibraryReady ? 'Unduh JPG' : 'Menyiapkan...'}
               </button>
             </div>
           )}
@@ -1967,8 +2082,15 @@ export default function App() {
                             <div className="space-y-4">
                               <div className="flex justify-end no-print mb-4">
                                 {!isExportingMode && (
-                                  <button onClick={handleExportPDF} className="bg-cyan-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-cyan-700 transition-colors shadow-md">
-                                    <Download size={14}/> Unduh Kisi-kisi (PDF)
+                                  <button 
+                                    onClick={handleExportPDF} 
+                                    disabled={isPdfLoading || !isLibraryReady}
+                                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
+                                      isLibraryReady ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
+                                    {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'Unduh Kisi-kisi (PDF)')}
                                   </button>
                                 )}
                               </div>
@@ -2001,8 +2123,15 @@ export default function App() {
                             <div className="space-y-4">
                               <div className="flex justify-end no-print mb-4">
                                 {!isExportingMode && (
-                                  <button onClick={handleExportPDF} className="bg-rose-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-rose-700 transition-colors shadow-md">
-                                    <Download size={14}/> Unduh Prota (PDF)
+                                  <button 
+                                    onClick={handleExportPDF} 
+                                    disabled={isPdfLoading || !isLibraryReady}
+                                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
+                                      isLibraryReady ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
+                                    {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'Unduh Prota (PDF)')}
                                   </button>
                                 )}
                               </div>
@@ -2029,8 +2158,15 @@ export default function App() {
                             <div className="space-y-4">
                               <div className="flex justify-end no-print mb-4">
                                 {!isExportingMode && (
-                                  <button onClick={handleExportPDF} className="bg-teal-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-teal-700 transition-colors shadow-md">
-                                    <Download size={14}/> Unduh Prosem (PDF)
+                                  <button 
+                                    onClick={handleExportPDF} 
+                                    disabled={isPdfLoading || !isLibraryReady}
+                                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
+                                      isLibraryReady ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
+                                    {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'Unduh Prosem (PDF)')}
                                   </button>
                                 )}
                               </div>
@@ -2116,15 +2252,22 @@ export default function App() {
                                   <Sparkles className="text-purple-600" size={20}/> AI Mindmap Bagan
                                 </h3>
                                 {!isExportingMode && (
-                                  <button onClick={handleExportPDF} className="bg-purple-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 hover:bg-purple-700 transition-colors shadow-md">
-                                    <Download size={14}/> Unduh Mindmap (PDF)
+                                  <button 
+                                    onClick={handleExportPDF} 
+                                    disabled={!isLibraryReady}
+                                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
+                                      isLibraryReady ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    {isLibraryReady ? <Download size={14}/> : <Loader2 size={14} className="animate-spin"/>}
+                                    {isLibraryReady ? 'Unduh Mindmap (PDF)' : 'Menyiapkan...'}
                                   </button>
                                 )}
                               </div>
                               
                               <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-200 shadow-inner">
                                 {result.mindmap ? (
-                                  <MindmapNode node={result.mindmap} />
+                                  <MindmapNode node={result.mindmap} isExportingMode={isExportingMode} />
                                 ) : (
                                   <div className="text-center py-10 text-slate-500 italic">Data mindmap tidak tersedia.</div>
                                 )}
