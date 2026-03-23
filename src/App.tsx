@@ -83,6 +83,8 @@ export default function App() {
   const [noEssayMode, setNoEssayMode] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isGeneratingMateri, setIsGeneratingMateri] = useState(false);
+  const [isChatMaximized, setIsChatMaximized] = useState(false);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
   
   // --- STATE KALENDER PENDIDIKAN ---
   const [showCalendar, setShowCalendar] = useState(false);
@@ -783,13 +785,13 @@ export default function App() {
           {/* HEADER BRANDING */}
           {!isExportingMode && (
             <div className="space-y-4">
-              <div className="relative flex items-center justify-between bg-white px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
+              <div className="relative flex items-center justify-between bg-white px-4 md:px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
                  {/* UPDATE INDICATOR */}
-                 <div className="absolute top-2 right-4 text-[9px] font-black text-slate-300 uppercase tracking-tighter">
+                 <div className="absolute top-2 right-4 text-[8px] md:text-[9px] font-black text-slate-300 uppercase tracking-tighter">
                    Update 06.03.26
                  </div>
                  <div className="flex items-center gap-3">
-                   <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-md border border-slate-100 overflow-hidden p-1">
+                   <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl flex items-center justify-center shadow-md border border-slate-100 overflow-hidden p-1">
                       {logoBase64 ? (
                         <img src={logoBase64} alt="Logo" className="w-full h-full object-contain" crossOrigin="anonymous" />
                       ) : (
@@ -797,8 +799,8 @@ export default function App() {
                       )}
                    </div>
                    <div>
-                     <h1 className="text-xl font-black text-slate-800 tracking-tight">WAKA AIK SMPMUSAPRO</h1>
-                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SMP MUHAMMADIYAH 1 PROBOLINGGO</p>
+                     <h1 className="text-lg md:text-xl font-black text-slate-800 tracking-tight">WAKA AIK SMPMUSAPRO</h1>
+                     <p className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">SMP MUHAMMADIYAH 1 PROBOLINGGO</p>
                    </div>
                  </div>
                  <div className="hidden md:flex items-center gap-6 text-xs font-bold text-slate-500">
@@ -809,18 +811,24 @@ export default function App() {
 
               {/* MAIN NAVIGATION */}
               <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar">
-                <button onClick={() => { setMainTab('modul'); setActiveTab('rpp'); }} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'modul' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Layout size={16}/> Buat Modul</button>
-                <button onClick={() => { setMainTab('prota'); setActiveTab('prota'); }} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prota' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Calendar size={16}/> Prota</button>
-                <button onClick={() => { setMainTab('prosem'); setActiveTab('prosem'); }} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prosem' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><RefreshCw size={16}/> Prosem</button>
-                <button onClick={() => { setMainTab('soal'); setActiveTab('evaluasi'); }} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'soal' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><ClipboardList size={16}/> Generate Soal</button>
-                <button onClick={() => setMainTab('konsultasi')} className={`flex-1 px-6 py-3 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'konsultasi' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Sparkles size={16}/> Konsultasi</button>
+                <button onClick={() => { setMainTab('modul'); setActiveTab('rpp'); }} className={`flex-1 min-w-[120px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'modul' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Layout size={16}/> Buat Modul</button>
+                <button onClick={() => { setMainTab('prota'); setActiveTab('prota'); }} className={`flex-1 min-w-[100px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prota' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Calendar size={16}/> Prota</button>
+                <button onClick={() => { setMainTab('prosem'); setActiveTab('prosem'); }} className={`flex-1 min-w-[100px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prosem' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><RefreshCw size={16}/> Prosem</button>
+                <button onClick={() => { setMainTab('soal'); setActiveTab('evaluasi'); }} className={`flex-1 min-w-[140px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'soal' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><ClipboardList size={16}/> Generate Soal</button>
+                <button onClick={() => setMainTab('konsultasi')} className={`flex-1 min-w-[120px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'konsultasi' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Sparkles size={16}/> Konsultasi</button>
               </div>
             </div>
           )}
 
           {/* KONSULTASI CHAT INTERFACE */}
           {mainTab === 'konsultasi' && !isExportingMode && (
-            <div className="bg-[#E5DDD5] rounded-2xl shadow-xl border border-slate-200 flex flex-col h-[650px] overflow-hidden relative">
+            <div className={`bg-[#E5DDD5] rounded-2xl shadow-xl border border-slate-200 flex flex-col overflow-hidden relative transition-all duration-300 ${
+              isChatMaximized 
+                ? 'fixed inset-4 z-[100] h-auto' 
+                : isChatMinimized 
+                  ? 'h-[60px]' 
+                  : 'h-[650px]'
+            }`}>
               {/* WhatsApp Header */}
               <div className="bg-[#075E54] p-3 text-white flex items-center justify-between shadow-md z-10">
                 <div className="flex items-center gap-3">
@@ -838,7 +846,27 @@ export default function App() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      setIsChatMinimized(!isChatMinimized);
+                      if (isChatMaximized) setIsChatMaximized(false);
+                    }}
+                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white"
+                    title={isChatMinimized ? "Buka Chat" : "Minimal Layar"}
+                  >
+                    {isChatMinimized ? <Plus size={18} /> : <Minus size={18} />}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsChatMaximized(!isChatMaximized);
+                      if (isChatMinimized) setIsChatMinimized(false);
+                    }}
+                    className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white"
+                    title={isChatMaximized ? "Kecilkan Layar" : "Maximaze Layar"}
+                  >
+                    <Maximize2 size={18} />
+                  </button>
                   <button 
                     onClick={() => setChatMessages([])}
                     className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white"
@@ -850,82 +878,86 @@ export default function App() {
               </div>
               
               {/* Chat Area */}
-              <div className="flex-grow overflow-y-auto p-4 space-y-3">
-                {chatMessages.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
-                    <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-white max-w-xs">
-                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Enkripsi End-to-End</p>
-                      <p className="text-xs text-slate-600 leading-relaxed">Pesan dalam chat ini dilindungi secara profesional. Tanyakan apa saja seputar Kurikulum Merdeka atau AIK.</p>
-                    </div>
-                  </div>
-                )}
-                
-                {chatMessages.map((msg, idx) => (
-                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`relative max-w-[85%] px-3 py-2 rounded-lg text-sm shadow-sm ${
-                      msg.role === 'user' 
-                        ? 'bg-[#DCF8C6] text-slate-800 rounded-tr-none' 
-                        : 'bg-white text-slate-800 rounded-tl-none'
-                    }`}>
-                      {/* Tail for bubbles */}
-                      <div className={`absolute top-0 w-2 h-2 ${
-                        msg.role === 'user' 
-                          ? '-right-2 bg-[#DCF8C6] [clip-path:polygon(0_0,0_100%,100%_0)]' 
-                          : '-left-2 bg-white [clip-path:polygon(100%_0,100%_100%,0_0)]'
-                      }`}></div>
-                      
-                      <div className="leading-relaxed break-words">
-                        {renderFormattedText(msg.text)}
+              {!isChatMinimized && (
+                <>
+                  <div className="flex-grow overflow-y-auto p-4 space-y-3">
+                    {chatMessages.length === 0 && (
+                      <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+                        <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-sm border border-white max-w-xs">
+                          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">Enkripsi End-to-End</p>
+                          <p className="text-xs text-slate-600 leading-relaxed">Pesan dalam chat ini dilindungi secara profesional. Tanyakan apa saja seputar Kurikulum Merdeka atau AIK.</p>
+                        </div>
                       </div>
-                      <div className="text-[9px] text-slate-400 text-right mt-1 flex items-center justify-end gap-1">
-                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        {msg.role === 'user' && <CheckCircle2 size={10} className="text-blue-500" />}
+                    )}
+                    
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`relative max-w-[85%] px-3 py-2 rounded-lg text-sm shadow-sm ${
+                          msg.role === 'user' 
+                            ? 'bg-[#DCF8C6] text-slate-800 rounded-tr-none' 
+                            : 'bg-white text-slate-800 rounded-tl-none'
+                        }`}>
+                          {/* Tail for bubbles */}
+                          <div className={`absolute top-0 w-2 h-2 ${
+                            msg.role === 'user' 
+                              ? '-right-2 bg-[#DCF8C6] [clip-path:polygon(0_0,0_100%,100%_0)]' 
+                              : '-left-2 bg-white [clip-path:polygon(100%_0,100%_100%,0_0)]'
+                          }`}></div>
+                          
+                          <div className="leading-relaxed break-words">
+                            {renderFormattedText(msg.text)}
+                          </div>
+                          <div className="text-[9px] text-slate-400 text-right mt-1 flex items-center justify-end gap-1">
+                            {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {msg.role === 'user' && <CheckCircle2 size={10} className="text-blue-500" />}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
-                
-                {isChatLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-white px-3 py-2 rounded-lg rounded-tl-none shadow-sm flex items-center gap-2 relative">
-                      <div className="absolute top-0 -left-2 w-2 h-2 bg-white [clip-path:polygon(100%_0,100%_100%,0_0)]"></div>
-                      <div className="flex gap-1">
-                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                        <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce"></span>
+                    ))}
+                    
+                    {isChatLoading && (
+                      <div className="flex justify-start">
+                        <div className="bg-white px-3 py-2 rounded-lg rounded-tl-none shadow-sm flex items-center gap-2 relative">
+                          <div className="absolute top-0 -left-2 w-2 h-2 bg-white [clip-path:polygon(100%_0,100%_100%,0_0)]"></div>
+                          <div className="flex gap-1">
+                            <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                            <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                            <span className="w-1.5 h-1.5 bg-slate-300 rounded-full animate-bounce"></span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    )}
+                    <div ref={chatEndRef} />
                   </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
 
-              {/* WhatsApp Input Area */}
-              <div className="p-2 bg-[#F0F2F5] flex items-center gap-2">
-                <div className="flex gap-1 px-1">
-                  <button className="p-2 text-slate-500 hover:text-slate-700 transition-colors"><Smile size={22} /></button>
-                  <button className="p-2 text-slate-500 hover:text-slate-700 transition-colors"><Paperclip size={22} /></button>
-                </div>
-                <div className="flex-grow relative">
-                  <input 
-                    type="text" 
-                    value={chatInput} 
-                    onChange={e => setChatInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleChat()}
-                    placeholder="Ketik pesan"
-                    className="w-full p-2.5 px-4 bg-white border-none rounded-full text-sm focus:ring-0 outline-none shadow-sm"
-                  />
-                </div>
-                <button 
-                  onClick={handleChat}
-                  disabled={isChatLoading || !chatInput.trim()}
-                  className={`p-3 rounded-full flex items-center justify-center transition-all shadow-md ${
-                    chatInput.trim() ? 'bg-[#00A884] text-white hover:bg-[#008F6F]' : 'bg-slate-400 text-white opacity-50'
-                  }`}
-                >
-                  <Send size={20} />
-                </button>
-              </div>
+                  {/* WhatsApp Input Area */}
+                  <div className="p-2 bg-[#F0F2F5] flex items-center gap-2">
+                    <div className="flex gap-1 px-1">
+                      <button className="p-2 text-slate-500 hover:text-slate-700 transition-colors"><Smile size={22} /></button>
+                      <button className="p-2 text-slate-500 hover:text-slate-700 transition-colors"><Paperclip size={22} /></button>
+                    </div>
+                    <div className="flex-grow relative">
+                      <input 
+                        type="text" 
+                        value={chatInput} 
+                        onChange={e => setChatInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleChat()}
+                        placeholder="Ketik pesan"
+                        className="w-full p-2.5 px-4 bg-white border-none rounded-full text-sm focus:ring-0 outline-none shadow-sm"
+                      />
+                    </div>
+                    <button 
+                      onClick={handleChat}
+                      disabled={isChatLoading || !chatInput.trim()}
+                      className={`p-3 rounded-full flex items-center justify-center transition-all shadow-md ${
+                        chatInput.trim() ? 'bg-[#00A884] text-white hover:bg-[#008F6F]' : 'bg-slate-400 text-white opacity-50'
+                      }`}
+                    >
+                      <Send size={20} />
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -1908,6 +1940,17 @@ export default function App() {
         </div>
       </div>
       
+      {/* REFRESH BUTTON */}
+      {!isExportingMode && (
+        <button 
+          onClick={() => window.location.reload()}
+          className="fixed bottom-6 right-6 p-4 bg-slate-800 text-white rounded-full shadow-2xl hover:bg-black transition-all active:scale-90 z-[1000] flex items-center justify-center"
+          title="Reload Halaman"
+        >
+          <RefreshCw size={24} />
+        </button>
+      )}
+
       {!isExportingMode && (
         <footer className="bg-white border-t border-slate-200 py-6 text-center shadow-inner mt-10">
           <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center justify-center gap-2">
