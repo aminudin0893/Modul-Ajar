@@ -41,3 +41,28 @@
   --color-indigo-600: #4f46e5;
   --color-pink-600: #db2777;
 }
+
+@layer utilities {
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+    
+    body {
+      background-color: white !important;
+      padding: 0 !important;
+    }
+
+    .max-w-6xl {
+      max-width: none !important;
+    }
+
+    .shadow-xl, .shadow-lg, .shadow-md, .shadow-sm {
+      box-shadow: none !important;
+    }
+
+    .border-slate-200, .border-slate-100 {
+      border-color: #eee !important;
+    }
+  }
+}

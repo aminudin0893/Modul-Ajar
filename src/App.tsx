@@ -709,6 +709,15 @@ export default function App() {
     }
   };
 
+  const handlePrintPage = () => {
+    if (!result) return;
+    setIsExportingMode(true);
+    setTimeout(() => {
+      window.print();
+      setIsExportingMode(false);
+    }, 500);
+  };
+
   const handleExportPDF = () => {
     if (!result) return;
     
@@ -968,7 +977,7 @@ export default function App() {
           
           {/* HEADER BRANDING */}
           {!isExportingMode && (
-            <div className="space-y-4">
+            <div className="space-y-4 no-print">
               <div className="relative flex items-center justify-between bg-white px-4 md:px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
                  {/* UPDATE INDICATOR */}
                  <div className="absolute top-2 right-4 text-[8px] md:text-[9px] font-black text-slate-300 uppercase tracking-tighter">
@@ -994,7 +1003,7 @@ export default function App() {
               </div>
 
               {/* MAIN NAVIGATION */}
-              <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar">
+              <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar no-print">
                 <button onClick={() => { setMainTab('modul'); setActiveTab('rpp'); }} className={`flex-1 min-w-[120px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'modul' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Layout size={16}/> Buat Modul</button>
                 <button onClick={() => { setMainTab('prota'); setActiveTab('prota'); }} className={`flex-1 min-w-[100px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prota' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Calendar size={16}/> Prota</button>
                 <button onClick={() => { setMainTab('prosem'); setActiveTab('prosem'); }} className={`flex-1 min-w-[100px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prosem' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><RefreshCw size={16}/> Prosem</button>
@@ -1147,7 +1156,7 @@ export default function App() {
 
           {/* CONTROL PANEL */}
           {mainTab !== 'konsultasi' && !isExportingMode && (
-            <div className="bg-white p-6 rounded-2xl shadow-xl border-b-8 border-slate-800 transition-all">
+            <div className="bg-white p-6 rounded-2xl shadow-xl border-b-8 border-slate-800 transition-all no-print">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4 border-r border-slate-100 pr-0 lg:pr-6">
                   <h3 className="text-xs font-black text-blue-600 uppercase tracking-widest flex items-center gap-2"><Layout size={14} /> Identitas Sekolah</h3>
@@ -2248,14 +2257,11 @@ export default function App() {
                                 </h3>
                                 {!isExportingMode && (
                                   <button 
-                                    onClick={handleExportPDF} 
-                                    disabled={!isLibraryReady}
-                                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
-                                      isLibraryReady ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                    }`}
+                                    onClick={handlePrintPage} 
+                                    className="px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md bg-purple-600 text-white hover:bg-purple-700"
                                   >
-                                    {isLibraryReady ? <Printer size={14}/> : <Loader2 size={14} className="animate-spin"/>}
-                                    {isLibraryReady ? 'Print Mindmap' : 'Menyiapkan...'}
+                                    <Printer size={14}/>
+                                    Print Mindmap
                                   </button>
                                 )}
                               </div>
@@ -2268,7 +2274,7 @@ export default function App() {
                                 )}
                               </div>
                               
-                              <div className="mt-8 p-4 bg-blue-50 rounded-xl border border-blue-100 text-[11px] text-blue-800 italic">
+                              <div className="mt-8 p-4 bg-blue-50 rounded-xl border border-blue-100 text-[11px] text-blue-800 italic no-print">
                                 * Klik pada kotak materi untuk membuka atau menutup sub-materi yang berkaitan.
                               </div>
                             </div>
