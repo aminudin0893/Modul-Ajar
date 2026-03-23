@@ -1488,7 +1488,7 @@ export default function App() {
                         </div>
                         <div className="space-y-2">
                           {soalMaterials.map((m, idx) => (
-                            <div key={idx} className="flex gap-2 items-center">
+                            <div key={idx} className="flex flex-col md:flex-row gap-2 md:items-center p-2 md:p-0 bg-slate-50 md:bg-transparent rounded-lg border md:border-0 border-slate-100">
                               <input 
                                 type="text" 
                                 value={m.topic} 
@@ -1498,45 +1498,47 @@ export default function App() {
                                   setSoalMaterials(newM);
                                 }}
                                 placeholder={`Materi ${idx + 1}`}
-                                className="flex-grow p-2 border rounded-lg text-xs font-bold bg-white"
+                                className="w-full md:flex-grow p-2 border rounded-lg text-xs font-bold bg-white"
                               />
-                              <select 
-                                value={m.level} 
-                                onChange={e => {
-                                  const newM = [...soalMaterials];
-                                  newM[idx].level = e.target.value as any;
-                                  setSoalMaterials(newM);
-                                }}
-                                className="p-2 border rounded-lg text-[10px] font-bold bg-white w-20"
-                              >
-                                <option value="Mudah">Mudah</option>
-                                <option value="Menengah">Menengah</option>
-                                <option value="HOTS">HOTS</option>
-                              </select>
-                              <select 
-                                value={m.bloom} 
-                                onChange={e => {
-                                  const newM = [...soalMaterials];
-                                  newM[idx].bloom = e.target.value;
-                                  setSoalMaterials(newM);
-                                }}
-                                className="p-2 border rounded-lg text-[10px] font-bold bg-white w-24"
-                              >
-                                <option value="C1">C1 (Mengingat)</option>
-                                <option value="C2">C2 (Memahami)</option>
-                                <option value="C3">C3 (Menerapkan)</option>
-                                <option value="C4">C4 (Menganalisis)</option>
-                                <option value="C5">C5 (Mengevaluasi)</option>
-                                <option value="C6">C6 (Mencipta)</option>
-                              </select>
-                              {soalMaterials.length > 1 && (
-                                <button 
-                                  onClick={() => setSoalMaterials(soalMaterials.filter((_, i) => i !== idx))}
-                                  className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                              <div className="flex gap-2 w-full md:w-auto items-center">
+                                <select 
+                                  value={m.level} 
+                                  onChange={e => {
+                                    const newM = [...soalMaterials];
+                                    newM[idx].level = e.target.value as any;
+                                    setSoalMaterials(newM);
+                                  }}
+                                  className="flex-1 md:w-20 p-2 border rounded-lg text-[10px] font-bold bg-white"
                                 >
-                                  <Minus size={14} />
-                                </button>
-                              )}
+                                  <option value="Mudah">Mudah</option>
+                                  <option value="Menengah">Menengah</option>
+                                  <option value="HOTS">HOTS</option>
+                                </select>
+                                <select 
+                                  value={m.bloom} 
+                                  onChange={e => {
+                                    const newM = [...soalMaterials];
+                                    newM[idx].bloom = e.target.value;
+                                    setSoalMaterials(newM);
+                                  }}
+                                  className="flex-1 md:w-24 p-2 border rounded-lg text-[10px] font-bold bg-white"
+                                >
+                                  <option value="C1">C1 (Mengingat)</option>
+                                  <option value="C2">C2 (Memahami)</option>
+                                  <option value="C3">C3 (Menerapkan)</option>
+                                  <option value="C4">C4 (Menganalisis)</option>
+                                  <option value="C5">C5 (Mengevaluasi)</option>
+                                  <option value="C6">C6 (Mencipta)</option>
+                                </select>
+                                {soalMaterials.length > 1 && (
+                                  <button 
+                                    onClick={() => setSoalMaterials(soalMaterials.filter((_, i) => i !== idx))}
+                                    className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                                  >
+                                    <Minus size={14} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
