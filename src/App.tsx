@@ -156,6 +156,7 @@ export default function App() {
   const [isGeneratingMateri, setIsGeneratingMateri] = useState(false);
   const [isChatMaximized, setIsChatMaximized] = useState(false);
   const [isChatMinimized, setIsChatMinimized] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [includeDalil, setIncludeDalil] = useState(true);
   
   // --- STATE KALENDER PENDIDIKAN ---
@@ -1011,10 +1012,10 @@ export default function App() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-100 font-sans text-slate-900 selection:bg-blue-100">
       <div className="flex-grow p-4 md:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+        <div className={`${isFocusMode ? 'max-w-full' : 'max-w-6xl'} mx-auto space-y-6 transition-all duration-500`}>
           
           {/* HEADER BRANDING */}
-          {!isExportingMode && (
+          {!isExportingMode && !isFocusMode && (
             <div className="space-y-4 no-print">
               <div className="relative flex items-center justify-between bg-white px-4 md:px-6 py-4 rounded-2xl shadow-sm border border-slate-200">
                  {/* UPDATE INDICATOR */}
@@ -1054,7 +1055,7 @@ export default function App() {
           {/* KONSULTASI CHAT INTERFACE */}
           {mainTab === 'konsultasi' && !isExportingMode && (
             <div className={`bg-[#E5DDD5] rounded-2xl shadow-xl border border-slate-200 flex flex-col overflow-hidden relative transition-all duration-300 ${
-              isChatMaximized 
+              isFocusMode || isChatMaximized 
                 ? 'fixed inset-4 z-[100] h-auto' 
                 : isChatMinimized 
                   ? 'h-[60px]' 
@@ -1193,7 +1194,7 @@ export default function App() {
           )}
 
           {/* CONTROL PANEL */}
-          {mainTab !== 'konsultasi' && !isExportingMode && (
+          {mainTab !== 'konsultasi' && !isExportingMode && !isFocusMode && (
             <div className="bg-white p-6 rounded-2xl shadow-xl border-b-8 border-slate-800 transition-all no-print">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-4 border-r border-slate-100 pr-0 lg:pr-6">
@@ -2364,18 +2365,29 @@ export default function App() {
         </div>
       </div>
       
-      {/* REFRESH BUTTON */}
+      {/* REFRESH & FOCUS BUTTONS */}
       {!isExportingMode && (
-        <button 
-          onClick={() => window.location.reload()}
-          className="fixed bottom-6 right-6 p-2.5 bg-slate-800 text-white rounded-full shadow-2xl hover:bg-black transition-all active:scale-90 z-[1000] flex items-center justify-center"
-          title="Reload Halaman"
-        >
-          <RefreshCw size={16} />
-        </button>
+        <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[1000] no-print">
+          {(result || mainTab === 'konsultasi') && (
+            <button 
+              onClick={() => setIsFocusMode(!isFocusMode)}
+              className={`p-2.5 rounded-full shadow-2xl transition-all active:scale-90 flex items-center justify-center ${isFocusMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-white text-slate-800 hover:bg-slate-100 border border-slate-200'}`}
+              title={isFocusMode ? "Keluar Mode Fokus" : "Mode Fokus (Sembunyikan Menu)"}
+            >
+              {isFocusMode ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          )}
+          <button 
+            onClick={() => window.location.reload()}
+            className="p-2.5 bg-slate-800 text-white rounded-full shadow-2xl hover:bg-black transition-all active:scale-90 flex items-center justify-center"
+            title="Reload Halaman"
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
       )}
 
-      {!isExportingMode && (
+      {!isExportingMode && !isFocusMode && (
         <footer className="bg-white border-t border-slate-200 py-6 text-center shadow-inner mt-10">
           <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center justify-center gap-2">
             WAKA AIK  &copy; {new Date().getFullYear()} • BY.AMINUDIN
