@@ -15,49 +15,53 @@ const MindmapNode = ({ node, depth = 0, isExportingMode = false }: { node: any, 
 
   const getDepthStyles = (d: number) => {
     switch(d) {
-      case 0: return 'bg-purple-600 text-white border-purple-700 shadow-lg ring-4 ring-purple-100';
-      case 1: return 'bg-blue-600 text-white border-blue-700 shadow-md';
-      case 2: return 'bg-white border-blue-200 text-blue-800 hover:border-blue-400 shadow-sm';
-      default: return 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300';
+      case 0: return 'bg-gradient-to-br from-indigo-600 via-purple-600 to-purple-700 text-white border-purple-400/30 shadow-2xl ring-4 ring-purple-500/10';
+      case 1: return 'bg-gradient-to-br from-blue-500 to-blue-600 text-white border-blue-400/30 shadow-xl';
+      case 2: return 'bg-white border-blue-100 text-blue-900 hover:border-blue-300 shadow-lg hover:shadow-xl';
+      default: return 'bg-slate-50/80 backdrop-blur-sm border-slate-200 text-slate-700 hover:border-slate-400 shadow-sm';
     }
   };
 
+  const indentSize = isExportingMode ? 28 : (typeof window !== 'undefined' && window.innerWidth < 640 ? 16 : 36);
+
   return (
-    <div className="relative" style={{ marginLeft: depth > 0 ? (isExportingMode ? '24px' : (window.innerWidth < 640 ? '12px' : '24px')) : '0' }}>
-      {/* Vertical line for hierarchy */}
+    <div className="relative transition-all duration-500 ease-out" style={{ marginLeft: depth > 0 ? `${indentSize}px` : '0' }}>
+      {/* Vertical line for hierarchy with gradient */}
       {depth > 0 && (
-        <div className="absolute -left-3 top-0 bottom-0 w-px bg-slate-200 sm:-left-6"></div>
+        <div className="absolute -left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-slate-300 via-slate-200 to-transparent sm:-left-8"></div>
       )}
       
-      <div className="flex items-start gap-2 group">
-        {/* Horizontal line connector */}
+      <div className="flex items-start gap-3 group">
+        {/* Horizontal line connector with gradient */}
         {depth > 0 && (
-          <div className="w-3 h-px bg-slate-200 mt-5 sm:w-6"></div>
+          <div className="w-4 h-0.5 bg-gradient-to-r from-slate-300 to-slate-200 mt-7 sm:w-8"></div>
         )}
         
         <div className="flex-1 mt-2">
           <div 
             onClick={() => !isExportingMode && setIsExpanded(!isExpanded)}
-            className={`p-3 rounded-xl border-2 transition-all duration-200 flex items-center gap-3 ${
-              isExportingMode ? 'cursor-default' : 'cursor-pointer active:scale-[0.98]'
+            className={`p-3.5 sm:p-5 rounded-[1.25rem] border transition-all duration-300 flex items-center gap-4 ${
+              isExportingMode ? 'cursor-default' : 'cursor-pointer active:scale-[0.96] hover:-translate-y-0.5'
             } ${getDepthStyles(depth)}`}
           >
             {node.children && node.children.length > 0 ? (
-              <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                depth < 2 ? 'bg-white/20' : 'bg-slate-100'
+              <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ${
+                depth < 2 ? 'bg-white/20 group-hover:bg-white/40' : 'bg-blue-50 group-hover:bg-blue-100'
               }`}>
-                {isOpen ? <Minus size={12}/> : <Plus size={12}/>}
+                {isOpen ? <Minus size={14} className="stroke-[3]"/> : <Plus size={14} className="stroke-[3]"/>}
               </div>
             ) : (
-              <div className="w-5 shrink-0"></div>
+              <div className="w-7 shrink-0 flex items-center justify-center">
+                <div className={`w-2 h-2 rounded-full ${depth < 2 ? 'bg-white/40' : 'bg-blue-200'}`}></div>
+              </div>
             )}
-            <span className={`font-bold leading-tight ${depth === 0 ? 'text-base' : 'text-sm'}`}>
+            <span className={`font-black tracking-tight leading-tight ${depth === 0 ? 'text-lg sm:text-xl' : 'text-sm sm:text-base'}`}>
               {node.label}
             </span>
           </div>
 
           {isOpen && node.children && node.children.length > 0 && (
-            <div className="space-y-1">
+            <div className="space-y-3 mt-3 animate-in fade-in slide-in-from-top-2 duration-500">
               {node.children.map((child: any, idx: number) => (
                 <MindmapNode key={idx} node={child} depth={depth + 1} isExportingMode={isExportingMode} />
               ))}
@@ -767,7 +771,8 @@ export default function App() {
     const baseName = mainTab === 'soal' ? examTitle : topic;
     
     // Mindmap butuh waktu lebih lama untuk render semua node yang terbuka
-    const waitTime = isMindmap ? 3000 : 1500;
+    const isProsem = activeTab === 'prosem';
+    const waitTime = isMindmap ? 3000 : (isProsem ? 2000 : 1500);
     
     setTimeout(() => {
       try {
@@ -781,17 +786,19 @@ export default function App() {
         const opt = {
           margin: [10, 10, 10, 10],
           filename: `${mainTab.toUpperCase()}_${activeTab.toUpperCase()}_${baseName.replace(/\s+/g, '_')}.pdf`,
-          image: { type: 'jpeg', quality: 0.95 },
+          image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { 
-            scale: isMindmap ? 1.5 : 2.5, // Kurangi scale untuk mindmap agar tidak hang
+            scale: isMindmap ? 1.5 : 2.5,
             useCORS: true, 
             logging: false,
             letterRendering: true,
-            width: isLandscape ? 1100 : 750,
-            windowWidth: isLandscape ? 1100 : 750,
+            width: isLandscape ? 1122 : 794,
+            windowWidth: isLandscape ? 1122 : 794,
+            scrollX: 0,
+            scrollY: 0
           },
           jsPDF: { unit: 'mm', format: paperDim, orientation: isLandscape ? 'landscape' : 'portrait', compress: true },
-          pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.header-bg', '.section-block'] }
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.header-bg', '.section-block', 'thead', 'tfoot'] }
         };
         
         // @ts-ignore
@@ -1042,12 +1049,12 @@ export default function App() {
               </div>
 
               {/* MAIN NAVIGATION */}
-              <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto no-scrollbar no-print">
-                <button onClick={() => { setMainTab('modul'); setActiveTab('rpp'); }} className={`flex-1 min-w-[120px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'modul' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Layout size={16}/> Buat Modul</button>
-                <button onClick={() => { setMainTab('prota'); setActiveTab('prota'); }} className={`flex-1 min-w-[100px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prota' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Calendar size={16}/> Prota</button>
-                <button onClick={() => { setMainTab('prosem'); setActiveTab('prosem'); }} className={`flex-1 min-w-[100px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'prosem' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><RefreshCw size={16}/> Prosem</button>
-                <button onClick={() => { setMainTab('soal'); setActiveTab('evaluasi'); }} className={`flex-1 min-w-[140px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'soal' ? 'bg-slate-800 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><ClipboardList size={16}/> Generate Soal</button>
-                <button onClick={() => setMainTab('konsultasi')} className={`flex-1 min-w-[120px] px-4 md:px-6 py-3 rounded-xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-2 transition-all ${mainTab === 'konsultasi' ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:bg-slate-50'}`}><Sparkles size={16}/> Konsultasi</button>
+              <div className="flex bg-white/70 backdrop-blur-md p-1.5 rounded-[2rem] shadow-xl border border-slate-200/60 overflow-x-auto no-scrollbar no-print gap-1.5">
+                <button onClick={() => { setMainTab('modul'); setActiveTab('rpp'); }} className={`flex-1 min-w-[140px] px-5 md:px-7 py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-3 transition-all duration-500 ${mainTab === 'modul' ? 'bg-slate-900 text-white shadow-2xl shadow-slate-400 scale-[1.03] z-10' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-md'}`}><Layout size={20}/> Buat Modul</button>
+                <button onClick={() => { setMainTab('prota'); setActiveTab('prota'); }} className={`flex-1 min-w-[120px] px-5 md:px-7 py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-3 transition-all duration-500 ${mainTab === 'prota' ? 'bg-slate-900 text-white shadow-2xl shadow-slate-400 scale-[1.03] z-10' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-md'}`}><Calendar size={20}/> Prota</button>
+                <button onClick={() => { setMainTab('prosem'); setActiveTab('prosem'); }} className={`flex-1 min-w-[120px] px-5 md:px-7 py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-3 transition-all duration-500 ${mainTab === 'prosem' ? 'bg-slate-900 text-white shadow-2xl shadow-slate-400 scale-[1.03] z-10' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-md'}`}><RefreshCw size={20}/> Prosem</button>
+                <button onClick={() => { setMainTab('soal'); setActiveTab('evaluasi'); }} className={`flex-1 min-w-[160px] px-5 md:px-7 py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-3 transition-all duration-500 ${mainTab === 'soal' ? 'bg-slate-900 text-white shadow-2xl shadow-slate-400 scale-[1.03] z-10' : 'text-slate-500 hover:bg-white hover:text-slate-900 hover:shadow-md'}`}><ClipboardList size={20}/> Generate Soal</button>
+                <button onClick={() => setMainTab('konsultasi')} className={`flex-1 min-w-[140px] px-5 md:px-7 py-4 rounded-2xl text-[10px] md:text-xs font-black uppercase flex items-center justify-center gap-3 transition-all duration-500 ${mainTab === 'konsultasi' ? 'bg-blue-600 text-white shadow-2xl shadow-blue-400 scale-[1.03] z-10' : 'text-slate-500 hover:bg-white hover:text-blue-600 hover:shadow-md'}`}><Sparkles size={20}/> Konsultasi</button>
               </div>
             </div>
           )}
@@ -1672,52 +1679,56 @@ export default function App() {
 
           {/* TAB NAVIGATION */}
           {result && !isExportingMode && mainTab === 'modul' && (
-            <div className="flex flex-wrap gap-2 justify-center bg-white p-3 rounded-2xl shadow-lg border border-slate-200 sticky top-4 z-50">
-              <button onClick={() => setActiveTab('rpp')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'rpp' ? 'bg-blue-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Layout size={12}/> Modul Utama</button>
-              <button onClick={() => setActiveTab('materi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'materi' ? 'bg-amber-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Materi</button>
-              <button onClick={() => setActiveTab('lkpd_individu')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'lkpd_individu' ? 'bg-emerald-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><User size={12}/> LKPD</button>
-              <button onClick={() => setActiveTab('penugasan')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'penugasan' ? 'bg-pink-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><PenTool size={12}/> Tugas</button>
-              <button onClick={() => setActiveTab('instrumen')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'instrumen' ? 'bg-indigo-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Rubrik</button>
-              <button onClick={() => setActiveTab('evaluasi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'evaluasi' ? 'bg-orange-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><FileText size={12}/> Evaluasi</button>
-              <button onClick={() => setActiveTab('kisi_kisi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'kisi_kisi' ? 'bg-cyan-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Kisi-kisi</button>
-              <button onClick={() => setActiveTab('prota')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'prota' ? 'bg-rose-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Calendar size={12}/> Prota</button>
-              <button onClick={() => setActiveTab('prosem')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'prosem' ? 'bg-teal-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><RefreshCw size={12}/> Prosem</button>
-              <button onClick={() => setActiveTab('mindmap')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'mindmap' ? 'bg-purple-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><Sparkles size={12}/> Mindmap</button>
-              
-              <div className="h-8 w-px bg-slate-200 mx-2 hidden lg:block"></div>
-              
-              <div className="flex gap-1">
-                <button onClick={() => setIsEditMode(!isEditMode)} className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                  {isEditMode ? <Save size={12}/> : <Edit3 size={12}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
-                </button>
-                <button 
-                  onClick={handleExportPDF} 
-                  disabled={isPdfLoading || !isLibraryReady} 
-                  className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all disabled:opacity-50 ${
-                    isLibraryReady ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                  }`}
-                >
-                  {isPdfLoading || !isLibraryReady ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>}
-                  {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'PDF')}
-                </button>
-                <button onClick={() => exportToWord('doc')} className="bg-slate-800 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-black transition-all"><FileType size={12}/> Word</button>
-                <button 
-                  onClick={handleExportImage} 
-                  disabled={!isLibraryReady}
-                  className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${
-                    isLibraryReady ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                  }`}
-                >
-                  {isLibraryReady ? <ImageIcon size={12}/> : <Loader2 size={12} className="animate-spin"/>}
-                  {isLibraryReady ? 'JPG' : '...'}
-                </button>
+            <div className="sticky top-4 z-50 bg-white/90 backdrop-blur-xl p-3 sm:p-4 rounded-[2.5rem] shadow-2xl border border-slate-200/50 overflow-hidden">
+              <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide snap-x snap-mandatory no-scrollbar">
+                <button onClick={() => setActiveTab('rpp')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'rpp' ? 'bg-blue-600 text-white shadow-xl shadow-blue-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><Layout size={16}/> Modul Utama</button>
+                <button onClick={() => setActiveTab('materi')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'materi' ? 'bg-amber-600 text-white shadow-xl shadow-amber-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><ClipboardList size={16}/> Materi</button>
+                <button onClick={() => setActiveTab('lkpd_individu')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'lkpd_individu' ? 'bg-emerald-600 text-white shadow-xl shadow-emerald-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><User size={16}/> LKPD</button>
+                <button onClick={() => setActiveTab('penugasan')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'penugasan' ? 'bg-pink-600 text-white shadow-xl shadow-pink-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><PenTool size={16}/> Tugas</button>
+                <button onClick={() => setActiveTab('instrumen')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'instrumen' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><ClipboardList size={16}/> Rubrik</button>
+                <button onClick={() => setActiveTab('evaluasi')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'evaluasi' ? 'bg-orange-600 text-white shadow-xl shadow-orange-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><FileText size={16}/> Evaluasi</button>
+                <button onClick={() => setActiveTab('kisi_kisi')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'kisi_kisi' ? 'bg-cyan-600 text-white shadow-xl shadow-cyan-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><ClipboardList size={16}/> Kisi-kisi</button>
+                <button onClick={() => setActiveTab('prota')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'prota' ? 'bg-rose-600 text-white shadow-xl shadow-rose-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><Calendar size={16}/> Prota</button>
+                <button onClick={() => setActiveTab('prosem')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'prosem' ? 'bg-teal-600 text-white shadow-xl shadow-teal-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><RefreshCw size={16}/> Prosem</button>
+                <button onClick={() => setActiveTab('mindmap')} className={`snap-start shrink-0 px-5 py-3 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2.5 transition-all duration-500 ${activeTab === 'mindmap' ? 'bg-purple-600 text-white shadow-xl shadow-purple-300 scale-105' : 'bg-slate-50 text-slate-500 hover:bg-white hover:shadow-md hover:text-slate-800'}`}><Sparkles size={16}/> Mindmap</button>
               </div>
+              
+              <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-100/50">
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => setIsEditMode(!isEditMode)} className={`px-4 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 transition-all border-2 ${isEditMode ? 'bg-amber-500 text-white border-amber-600 shadow-lg' : 'bg-white text-slate-600 border-slate-100 hover:border-slate-300 hover:bg-slate-50'}`}>
+                    {isEditMode ? <Save size={14}/> : <Edit3 size={14}/>} {isEditMode ? 'Selesai' : 'Edit'}
+                  </button>
+                  <button 
+                    onClick={handleExportPDF} 
+                    disabled={isPdfLoading || !isLibraryReady} 
+                    className={`px-4 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 transition-all disabled:opacity-50 shadow-md ${
+                      isLibraryReady ? 'bg-red-600 text-white hover:bg-red-700 hover:shadow-lg' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                    }`}
+                  >
+                    {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
+                    {isPdfLoading ? 'Exporting...' : 'PDF'}
+                  </button>
+                  <button onClick={() => exportToWord('doc')} className="bg-slate-900 text-white px-4 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 hover:bg-black transition-all shadow-md hover:shadow-lg"><FileType size={14}/> Word</button>
+                  <button 
+                    onClick={handleExportImage} 
+                    disabled={!isLibraryReady}
+                    className={`px-4 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 transition-all border-2 ${
+                      isLibraryReady ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700 shadow-md hover:shadow-lg' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                    }`}
+                  >
+                    {isLibraryReady ? <ImageIcon size={14}/> : <Loader2 size={14} className="animate-spin"/>}
+                    {isLibraryReady ? 'JPG' : '...'}
+                  </button>
+                </div>
 
-              {(activeTab === 'evaluasi') && (
-                <button onClick={() => setShowAnswers(!showAnswers)} className={`ml-2 px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 border transition-all ${showAnswers ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-300'}`}>
-                  {showAnswers ? <EyeOff size={12}/> : <Eye size={12}/>} {showAnswers ? 'Guru View' : 'Siswa View'}
-                </button>
-              )}
+                <div className="flex items-center gap-2">
+                  {(activeTab === 'evaluasi') && (
+                    <button onClick={() => setShowAnswers(!showAnswers)} className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 border transition-all ${showAnswers ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-300'}`}>
+                      {showAnswers ? <EyeOff size={12}/> : <Eye size={12}/>} {showAnswers ? 'Guru View' : 'Siswa View'}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -1727,70 +1738,40 @@ export default function App() {
               <button onClick={() => setActiveTab('evaluasi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'evaluasi' ? 'bg-orange-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><FileText size={12}/> Daftar Soal</button>
               <button onClick={() => setActiveTab('kisi_kisi')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all ${activeTab === 'kisi_kisi' ? 'bg-cyan-600 text-white shadow-lg scale-105' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}><ClipboardList size={12}/> Kisi-kisi</button>
               
-              <div className="h-8 w-px bg-slate-200 mx-2 hidden lg:block"></div>
-              
-              <div className="flex gap-1">
-                <button onClick={() => setIsEditMode(!isEditMode)} className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                  {isEditMode ? <Save size={12}/> : <Edit3 size={12}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
-                </button>
-                <button 
-                  onClick={handleExportPDF} 
-                  disabled={isPdfLoading || !isLibraryReady} 
-                  className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all disabled:opacity-50 ${
-                    isLibraryReady ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                  }`}
-                >
-                  {isPdfLoading || !isLibraryReady ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>}
-                  {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'PDF')}
-                </button>
-                <button onClick={() => exportToWord('doc')} className="bg-slate-800 text-white px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 hover:bg-black transition-all"><FileType size={12}/> Word</button>
-                <button 
-                  onClick={handleExportImage} 
-                  disabled={!isLibraryReady}
-                  className={`px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-all border ${
-                    isLibraryReady ? 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700' : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-                  }`}
-                >
-                  {isLibraryReady ? <ImageIcon size={12}/> : <Loader2 size={12} className="animate-spin"/>}
-                  {isLibraryReady ? 'JPG' : '...'}
-                </button>
-              </div>
-
-              <button onClick={() => setShowAnswers(!showAnswers)} className={`ml-2 px-3 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1 border transition-all ${showAnswers ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-slate-100 text-slate-500 border-slate-300'}`}>
-                {showAnswers ? <EyeOff size={12}/> : <Eye size={12}/>} {showAnswers ? 'Mode Guru' : 'Mode Siswa'}
-              </button>
             </div>
           )}
 
           {/* EXPORT BAR FOR PROTA/PROSEM */}
           {result && !isExportingMode && (mainTab === 'prota' || mainTab === 'prosem') && (
-            <div className="flex justify-center bg-white p-3 rounded-2xl shadow-lg border border-slate-200 sticky top-4 z-50 gap-2">
-              <button onClick={() => setIsEditMode(!isEditMode)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
-                {isEditMode ? <Save size={14}/> : <Edit3 size={14}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
-              </button>
-              <button 
-                onClick={handleExportPDF} 
-                disabled={isPdfLoading || !isLibraryReady} 
-                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all disabled:opacity-50 shadow-md ${
-                  isLibraryReady ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
-                {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'Unduh PDF')}
-              </button>
-              <button onClick={() => exportToWord('doc')} className="bg-slate-800 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-black transition-all shadow-md">
-                <FileType size={14}/> Unduh Word
-              </button>
-              <button 
-                onClick={handleExportImage} 
-                disabled={!isLibraryReady}
-                className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 transition-all shadow-md ${
-                  isLibraryReady ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }`}
-              >
-                {isLibraryReady ? <ImageIcon size={14}/> : <Loader2 size={14} className="animate-spin"/>}
-                {isLibraryReady ? 'Unduh JPG' : 'Menyiapkan...'}
-              </button>
+            <div className="sticky top-4 z-50 bg-white/80 backdrop-blur-md p-2 sm:p-3 rounded-3xl shadow-2xl border border-slate-200/50 overflow-hidden">
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button onClick={() => setIsEditMode(!isEditMode)} className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 transition-all border ${isEditMode ? 'bg-amber-500 text-white border-amber-600 shadow-xl' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
+                  {isEditMode ? <Save size={14}/> : <Edit3 size={14}/>} {isEditMode ? 'Selesai Edit' : 'Edit Konten'}
+                </button>
+                <button 
+                  onClick={handleExportPDF} 
+                  disabled={isPdfLoading || !isLibraryReady} 
+                  className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 transition-all disabled:opacity-50 shadow-xl ${
+                    isLibraryReady ? 'bg-red-600 text-white hover:bg-red-700 shadow-red-200' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                  }`}
+                >
+                  {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
+                  {isPdfLoading ? 'Mengekspor...' : (!isLibraryReady ? 'Menyiapkan...' : 'Unduh PDF')}
+                </button>
+                <button onClick={() => exportToWord('doc')} className="bg-slate-800 text-white px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-black transition-all shadow-xl shadow-slate-200">
+                  <FileType size={14}/> Unduh Word
+                </button>
+                <button 
+                  onClick={handleExportImage} 
+                  disabled={!isLibraryReady}
+                  className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 transition-all shadow-xl ${
+                    isLibraryReady ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-200' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  {isLibraryReady ? <ImageIcon size={14}/> : <Loader2 size={14} className="animate-spin"/>}
+                  {isLibraryReady ? 'Unduh JPG' : 'Menyiapkan...'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -1835,84 +1816,116 @@ export default function App() {
 
               {/* RPP MAIN CONTENT */}
               {activeTab === 'rpp' ? (
-                <div style={{ width: '100%', boxSizing: 'border-box' }}>
-                  {/* Identitas Table */}
-                  <div className="section-block" style={{ pageBreakInside: 'avoid' }}>
-                    <table border={1} className="w-full border-collapse border border-black text-left" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
-                      <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
-                          <td colSpan={3} className="p-3 font-bold text-center uppercase text-[12px]" style={{ border: '1pt solid black' }}>
-                            {getHeaderTitle()}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="border border-black p-3 w-[36%] align-top space-y-1" style={{ border: '1pt solid black' }}>
-                            <div className="mb-2 font-bold text-[12px]">{kota}, {tanggal}</div>
-                            <div className="font-bold underline text-[12px]">Kepala Sekolah,</div>
-                            <div className="h-16"></div>
-                            <div className="font-bold underline text-[12px]">{namaKepala}</div>
-                            <div className="text-[11px]">NBM: {nbmKepala}</div>
-                          </td>
-                          <td className="border border-black p-3 w-[24%] align-top font-bold bg-slate-50 text-[11px]" style={{ border: '1pt solid black' }}>
-                            <div>Penyusun</div><div>Nomor NBM</div><div>Mata Pelajaran</div><div>Kelas/Semester</div><div>Tahun Ajaran</div><div>Alokasi Waktu</div><div>Fase</div>
-                          </td>
-                          <td className="border border-black p-3 w-[40%] align-top text-[11px]" style={{ border: '1pt solid black' }}>
-                            <div>: {namaPenyusun}</div><div>: {nbmPenyusun}</div><div>: {displaySubject}</div><div>: {kelas} / {semester}</div><div>: {tahunAjaran}</div><div>: {alokasiWaktu}</div><div className="font-bold">: Fase D</div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Section-by-section with forced page-break-inside avoid */}
-                  <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
-                      <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
-                          <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>A. IDENTIFIKASI MATERI</td>
-                        </tr>
-                        <tr>
-                          <td className="p-4" style={{ border: '1pt solid black' }}>{renderFormattedText(`**Target Peserta Didik:** ${result.identifikasi.pesertaDidik}\n**Materi Utama:** ${result.identifikasi.materi}\n**Dimensi Profil Pelajar Pancasila:** ${result.identifikasi.dimensiProfil}`)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
-                      <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
-                          <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>B. DESAIN PEMBELAJARAN</td>
-                        </tr>
-                        <tr>
-                          <td className="p-4" style={{ border: '1pt solid black' }}>{renderFormattedText(`**Capaian Pembelajaran (CP):** ${result.desainPembelajaran.capaian}\n**Tujuan Pembelajaran (TP):** ${result.desainPembelajaran.tp}\n**Metode & Praktik Pedagogis:** ${result.desainPembelajaran.praktikPedagogis}`)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {isKBCVisible && (
-                    <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                      <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                <div className="overflow-x-auto pb-4 scrollbar-hide" style={{ width: '100%', boxSizing: 'border-box' }}>
+                  <div className={!isExportingMode ? "min-w-[800px] lg:min-w-0" : ""}>
+                    {/* Identitas Table */}
+                    <div className="section-block" style={{ pageBreakInside: 'avoid' }}>
+                      <table border={1} className="w-full border-collapse border border-black text-left" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box', width: '100%' }}>
                         <tbody>
                           <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
-                            <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>C. KURIKULUM BERBASIS CINTA (KBC) INTEGRATED</td>
+                            <td colSpan={3} className="p-3 font-bold text-center uppercase text-[12px]" style={{ border: '1pt solid black' }}>
+                              {getHeaderTitle()}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="border border-black p-3 w-[36%] align-top space-y-1" style={{ border: '1pt solid black' }}>
+                              <div className="mb-2 font-bold text-[12px]">{kota}, {tanggal}</div>
+                              <div className="font-bold underline text-[12px]">Kepala Sekolah,</div>
+                              <div className="h-16"></div>
+                              <div className="font-bold underline text-[12px]">{namaKepala}</div>
+                              <div className="text-[11px]">NBM: {nbmKepala}</div>
+                            </td>
+                            <td className="border border-black p-3 w-[24%] align-top font-bold bg-slate-50 text-[11px]" style={{ border: '1pt solid black' }}>
+                              <div>Penyusun</div><div>Nomor NBM</div><div>Mata Pelajaran</div><div>Kelas/Semester</div><div>Tahun Ajaran</div><div>Alokasi Waktu</div><div>Fase</div>
+                            </td>
+                            <td className="border border-black p-3 w-[40%] align-top text-[11px]" style={{ border: '1pt solid black' }}>
+                              <div>: {namaPenyusun}</div><div>: {nbmPenyusun}</div><div>: {displaySubject}</div><div>: {kelas} / {semester}</div><div>: {tahunAjaran}</div><div>: {alokasiWaktu}</div><div className="font-bold">: Fase D</div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Section-by-section with forced page-break-inside avoid */}
+                    <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
+                      <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box', width: '100%' }}>
+                        <tbody>
+                          <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
+                            <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>A. IDENTIFIKASI MATERI</td>
+                          </tr>
+                          <tr>
+                            <td className="p-4" style={{ border: '1pt solid black' }}>{renderFormattedText(`**Target Peserta Didik:** ${result.identifikasi.pesertaDidik}\n**Materi Utama:** ${result.identifikasi.materi}\n**Dimensi Profil Pelajar Pancasila:** ${result.identifikasi.dimensiProfil}`)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
+                      <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box', width: '100%' }}>
+                        <tbody>
+                          <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
+                            <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>B. DESAIN PEMBELAJARAN</td>
+                          </tr>
+                          <tr>
+                            <td className="p-4" style={{ border: '1pt solid black' }}>{renderFormattedText(`**Capaian Pembelajaran (CP):** ${result.desainPembelajaran.capaian}\n**Tujuan Pembelajaran (TP):** ${result.desainPembelajaran.tp}\n**Metode & Praktik Pedagogis:** ${result.desainPembelajaran.praktikPedagogis}`)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {isKBCVisible && (
+                      <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
+                        <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box', width: '100%' }}>
+                          <tbody>
+                            <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
+                              <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>C. KURIKULUM BERBASIS CINTA (KBC) INTEGRATED</td>
+                            </tr>
+                            <tr>
+                              <td className="p-0" style={{ border: '1pt solid black' }}>
+                                <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                                  <tbody>
+                                    <tr style={{ borderBottom: '1pt solid black' }}>
+                                      <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Cinta Allah</td>
+                                      <td className="p-3">{renderFormattedText(result.kurikulumCinta.cintaAllah)}</td>
+                                    </tr>
+                                    <tr style={{ borderBottom: '1pt solid black' }}>
+                                      <td className="p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Cinta Diri & Ilmu</td>
+                                      <td className="p-3">{renderFormattedText(`${result.kurikulumCinta.cintaDiri}\n${result.kurikulumCinta.cintaIlmu}`)}</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Cinta Alam & Sesama</td>
+                                      <td className="p-3">{renderFormattedText(`${result.kurikulumCinta.cintaAlam}\n${result.kurikulumCinta.cintaSesama}`)}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+
+                    <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
+                      <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box', width: '100%' }}>
+                        <tbody>
+                          <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
+                            <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>{isKBCVisible ? 'D' : 'C'}. KEGIATAN PEMBELAJARAN</td>
                           </tr>
                           <tr>
                             <td className="p-0" style={{ border: '1pt solid black' }}>
                               <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
                                 <tbody>
                                   <tr style={{ borderBottom: '1pt solid black' }}>
-                                    <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Cinta Allah</td>
-                                    <td className="p-3">{renderFormattedText(result.kurikulumCinta.cintaAllah)}</td>
+                                    <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Pendahuluan</td>
+                                    <td className="p-3">{renderFormattedText(result.pengalamanBelajar.awal)}</td>
                                   </tr>
                                   <tr style={{ borderBottom: '1pt solid black' }}>
-                                    <td className="p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Cinta Diri & Ilmu</td>
-                                    <td className="p-3">{renderFormattedText(`${result.kurikulumCinta.cintaDiri}\n${result.kurikulumCinta.cintaIlmu}`)}</td>
+                                    <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Kegiatan Inti</td>
+                                    <td className="p-3">{renderFormattedText(result.pengalamanBelajar.inti)}</td>
                                   </tr>
                                   <tr>
-                                    <td className="p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Cinta Alam & Sesama</td>
-                                    <td className="p-3">{renderFormattedText(`${result.kurikulumCinta.cintaAlam}\n${result.kurikulumCinta.cintaSesama}`)}</td>
+                                    <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Penutup</td>
+                                    <td className="p-3">{renderFormattedText(result.pengalamanBelajar.penutup)}</td>
                                   </tr>
                                 </tbody>
                               </table>
@@ -1921,62 +1934,32 @@ export default function App() {
                         </tbody>
                       </table>
                     </div>
-                  )}
 
-                  <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
-                      <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
-                          <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>{isKBCVisible ? 'D' : 'C'}. KEGIATAN PEMBELAJARAN</td>
-                        </tr>
-                        <tr>
-                          <td className="p-0" style={{ border: '1pt solid black' }}>
-                            <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
-                              <tbody>
-                                <tr style={{ borderBottom: '1pt solid black' }}>
-                                  <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Pendahuluan</td>
-                                  <td className="p-3">{renderFormattedText(result.pengalamanBelajar.awal)}</td>
-                                </tr>
-                                <tr style={{ borderBottom: '1pt solid black' }}>
-                                  <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Kegiatan Inti</td>
-                                  <td className="p-3">{renderFormattedText(result.pengalamanBelajar.inti)}</td>
-                                </tr>
-                                <tr>
-                                  <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Penutup</td>
-                                  <td className="p-3">{renderFormattedText(result.pengalamanBelajar.penutup)}</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
-                    <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
-                      <tbody>
-                        <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
-                          <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>{isKBCVisible ? 'E' : 'D'}. ASESMEN & REFLEKSI</td>
-                        </tr>
-                        <tr>
-                          <td className="p-0" style={{ border: '1pt solid black' }}>
-                            <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
-                              <tbody>
-                                <tr style={{ borderBottom: '1pt solid black' }}>
-                                  <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Formatif</td>
-                                  <td className="p-3">{renderFormattedText(result.asesmen.proses)}</td>
-                                </tr>
-                                <tr>
-                                  <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Sumatif</td>
-                                  <td className="p-3">{renderFormattedText(result.asesmen.akhir)}</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div className="section-block" style={{ marginTop: '-1pt', pageBreakInside: 'avoid' }}>
+                      <table className="w-full border-collapse border border-black" style={{ border: '1.5pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box', width: '100%' }}>
+                        <tbody>
+                          <tr className="header-bg" style={{ backgroundColor: '#b4c7e7', pageBreakAfter: 'avoid' }}>
+                            <td className="p-2 font-bold uppercase text-center" style={{ border: '1pt solid black' }}>{isKBCVisible ? 'E' : 'D'}. ASESMEN & REFLEKSI</td>
+                          </tr>
+                          <tr>
+                            <td className="p-0" style={{ border: '1pt solid black' }}>
+                              <table className="w-full border-none" style={{ tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                                <tbody>
+                                  <tr style={{ borderBottom: '1pt solid black' }}>
+                                    <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Formatif</td>
+                                    <td className="p-3">{renderFormattedText(result.asesmen.proses)}</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="w-40 p-3 border-r border-black font-bold bg-slate-50 text-[11px]" style={{ borderRight: '1pt solid black' }}>Sumatif</td>
+                                    <td className="p-3">{renderFormattedText(result.asesmen.akhir)}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -2099,7 +2082,8 @@ export default function App() {
                         </div>
                         <div className={activeTab === 'materi' ? "p-2" : "border border-black p-8 min-h-[500px]"} style={activeTab === 'materi' ? { boxSizing: 'border-box' } : { border: '1.5pt solid black', boxSizing: 'border-box' }}>
                           {activeTab === 'instrumen' ? (
-                            <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                            <div className="overflow-x-auto pb-4">
+                              <table border={1} className="w-full border-collapse border border-black min-w-[800px]" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box', width: '100%' }}>
                               <thead>
                                 <tr className="bg-slate-100 font-bold text-[11px]">
                                   <td className="p-3 border border-black w-32" style={{ border: '1pt solid black' }}>Kriteria Penilaian</td>
@@ -2121,15 +2105,16 @@ export default function App() {
                                 ))}
                               </tbody>
                             </table>
+                            </div>
                           ) : activeTab === 'kisi_kisi' ? (
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                               <div className="flex justify-end no-print mb-4">
                                 {!isExportingMode && (
                                   <button 
                                     onClick={handleExportPDF} 
                                     disabled={isPdfLoading || !isLibraryReady}
-                                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
-                                      isLibraryReady ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 transition-all disabled:opacity-50 shadow-xl ${
+                                      isLibraryReady ? 'bg-cyan-600 text-white hover:bg-cyan-700 shadow-cyan-200' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                                     }`}
                                   >
                                     {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
@@ -2137,7 +2122,8 @@ export default function App() {
                                   </button>
                                 )}
                               </div>
-                              <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                              <div className="overflow-x-auto pb-4">
+                                <table border={1} className="w-full border-collapse border border-black min-w-[800px]" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box', width: '100%' }}>
                               <thead>
                                 <tr className="bg-slate-100 font-bold text-[11px]">
                                   <td className="p-2 border border-black w-10 text-center" style={{ border: '1pt solid black' }}>No</td>
@@ -2162,15 +2148,16 @@ export default function App() {
                               </tbody>
                             </table>
                             </div>
+                            </div>
                           ) : activeTab === 'prota' ? (
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                               <div className="flex justify-end no-print mb-4">
                                 {!isExportingMode && (
                                   <button 
                                     onClick={handleExportPDF} 
                                     disabled={isPdfLoading || !isLibraryReady}
-                                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
-                                      isLibraryReady ? 'bg-rose-600 text-white hover:bg-rose-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 transition-all disabled:opacity-50 shadow-xl ${
+                                      isLibraryReady ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-rose-200' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                                     }`}
                                   >
                                     {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
@@ -2178,7 +2165,8 @@ export default function App() {
                                   </button>
                                 )}
                               </div>
-                              <table border={1} className="w-full border-collapse border border-black" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box' }}>
+                              <div className="overflow-x-auto pb-4">
+                                <table border={1} className="w-full border-collapse border border-black min-w-[800px]" style={{ border: '1pt solid black', tableLayout: 'fixed', borderSpacing: 0, boxSizing: 'border-box', width: '100%' }}>
                               <thead>
                                 <tr className="bg-slate-100 font-bold text-[11px]">
                                   <td className="p-3 border border-black w-24 text-center" style={{ border: '1pt solid black' }}>Semester</td>
@@ -2197,15 +2185,16 @@ export default function App() {
                               </tbody>
                             </table>
                             </div>
+                            </div>
                           ) : activeTab === 'prosem' ? (
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                               <div className="flex justify-end no-print mb-4">
                                 {!isExportingMode && (
                                   <button 
                                     onClick={handleExportPDF} 
                                     disabled={isPdfLoading || !isLibraryReady}
-                                    className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors shadow-md ${
-                                      isLibraryReady ? 'bg-teal-600 text-white hover:bg-teal-700' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                                    className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase flex items-center gap-2 transition-all disabled:opacity-50 shadow-xl ${
+                                      isLibraryReady ? 'bg-teal-600 text-white hover:bg-teal-700 shadow-teal-200' : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                                     }`}
                                   >
                                     {isPdfLoading || !isLibraryReady ? <Loader2 size={14} className="animate-spin"/> : <Download size={14}/>}
@@ -2215,10 +2204,10 @@ export default function App() {
                               </div>
                               
                               {result.prosem && (
-                                <div className="prosem-export-content">
+                                <div className="prosem-export-content overflow-x-auto pb-4">
                                   <div className="text-center font-bold text-lg mb-6 uppercase">PROGRAM SEMESTER (PROSEM)</div>
                                   
-                                  <div className="grid grid-cols-2 gap-8 mb-4 text-[11px]">
+                                  <div className="grid grid-cols-2 gap-8 mb-4 text-[11px] min-w-[800px]">
                                     <div className="space-y-1">
                                       <div className="flex"><span className="w-32">Mata Pelajaran</span><span>: {displaySubject}</span></div>
                                       <div className="flex"><span className="w-32">Kelas</span><span>: {kelas}</span></div>
@@ -2229,7 +2218,7 @@ export default function App() {
                                     </div>
                                   </div>
 
-                                  <table className="w-full border-collapse border border-black text-[9px]" style={{ border: '1pt solid black', tableLayout: 'fixed' }}>
+                                  <table className="w-full border-collapse border border-black text-[9px] min-w-[1000px]" style={{ border: '1pt solid black', tableLayout: 'fixed', width: '100%' }}>
                                     <thead>
                                       <tr className="bg-slate-100 font-bold">
                                         <th rowSpan={3} className="border border-black p-1 w-8" style={{ border: '1pt solid black' }}>No</th>
