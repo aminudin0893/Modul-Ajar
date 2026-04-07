@@ -131,6 +131,7 @@ export default function App() {
   const [soalMaterials, setSoalMaterials] = useState<Array<{ topic: string; level: 'Mudah' | 'Menengah' | 'HOTS'; bloom: string }>>([{ topic: '', level: 'Menengah', bloom: 'C2' }]);
   const [examTitle, setExamTitle] = useState('ASESMEN SUMATIF');
   const [noEssayMode, setNoEssayMode] = useState(false);
+  const [noPilganMode, setNoPilganMode] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isGeneratingMateri, setIsGeneratingMateri] = useState(false);
   const [isChatMaximized, setIsChatMaximized] = useState(false);
@@ -523,7 +524,7 @@ export default function App() {
           Pastikan setiap sub-bab ini diisi secara lengkap, mendalam, dan bebas dari kesalahan pengetikan (typo).` : 
           `Untuk mata pelajaran ${displaySubject}, sesuaikan struktur "materiLengkap" agar mencakup konsep-konsep kunci secara lengkap, sistematis, mendalam, dan bebas dari kesalahan pengetikan (typo). ${includeDalil ? 'Sertakan ayat Al-Qur\'an atau Hadits yang relevan jika memungkinkan.' : 'Jangan sertakan ayat Al-Qur\'an atau Hadits dalam teks materi.'}`
         }
-        6. Evaluasi: ${numPilgan} Pilihan Ganda (A-D) dan ${numEssay} Essay berbobot tinggi.
+        6. Evaluasi: ${noPilganMode ? 'JANGAN buat soal Pilihan Ganda.' : `Buat ${numPilgan} Pilihan Ganda (A-D)`} dan ${noEssayMode ? 'JANGAN buat soal Essay.' : `Buat ${numEssay} Essay berbobot tinggi.`}
         7. Kisi-kisi Soal: Buat tabel kisi-kisi soal yang mencakup nomor, materi, indikator soal, level kognitif (L1/L2/L3), Taksonomi Bloom (C1-C6), dan bentuk soal.
         8. Program Tahunan (Prota): Buat rencana program tahunan yang mencakup semester, materi pokok, dan alokasi waktu. Gunakan kalender pendidikan: Ganjil (${effectiveWeeksGanjil} Efektif, ${nonEffectiveWeeksGanjil} Tidak Efektif), Genap (${effectiveWeeksGenap} Efektif, ${nonEffectiveWeeksGenap} Tidak Efektif). ${calendarInfo}
         9. Program Semester (Prosem): Buat rencana program semester (6 bulan) yang mencakup materi pokok, alokasi waktu, dan jadwal bulanan. Sesuaikan dengan jumlah pekan efektif yang diberikan. ${calendarInfo}
@@ -555,7 +556,7 @@ export default function App() {
         
         WAJIB:
         1. Gunakan Bahasa Indonesia formal (EYD) yang sangat baik.
-        2. Buat ${numPilgan} soal Pilihan Ganda (A-D) yang berkualitas tinggi sesuai tingkat kesulitan yang diminta.
+        2. ${noPilganMode ? 'JANGAN buat soal Pilihan Ganda.' : `Buat ${numPilgan} soal Pilihan Ganda (A-D) yang berkualitas tinggi sesuai tingkat kesulitan yang diminta.`}
         3. ${noEssayMode ? 'JANGAN buat soal Essay.' : `Buat ${numEssay} soal Essay yang mendalam.`}
         4. Buat tabel KISI-KISI SOAL yang lengkap mencakup nomor, materi, indikator soal, level kognitif (L1/L2/L3), Taksonomi Bloom (C1-C6), dan bentuk soal.
         5. Jawab dalam format JSON murni sesuai schema (hanya isi bagian evaluasi dan kisiKisi, yang lain bisa dikosongkan atau dummy).`;
@@ -957,7 +958,7 @@ export default function App() {
         <div style={{ textAlign: 'center', width: '100%', paddingLeft: '85px', paddingRight: '20px', boxSizing: 'border-box', letterSpacing: isExportingMode ? '0.2px' : 'normal' }}>
           <p style={{ margin: '0', fontSize: '10pt', fontWeight: 'bold' }}>MAJELIS PENDIDIKAN DASAR MENENGAH DAN PENDIDIKAN NON FORMAL</p>
           <p style={{ margin: '0', fontSize: '11pt', fontWeight: 'bold' }}>PIMPINAN DAERAH MUHAMMADIYAH KOTA PROBOLINGGO</p>
-          <h1 style={{ margin: '2pt 0', fontSize: '15pt', fontWeight: 'bold', textTransform: 'uppercase' }}>SMP MUHAMMADIYAH 1 KOTA PROBOLINGGO</h1>
+          <h1 style={{ margin: '2pt 0', fontSize: '15pt', fontWeight: 'bold', textTransform: 'uppercase' }}>{namaSekolah}</h1>
           <p style={{ margin: '0', fontSize: '10pt', fontWeight: 'bold' }}>TERAKREDITASI A</p>
           <p style={{ margin: '0', fontSize: '9pt' }}>Jl. Mayjend Panjaitan 73 Kota Probolinggo Email: <span style={{ color: 'blue', textDecoration: 'underline' }}>smp_muh.prob@yahoo.co.id</span></p>
           <p style={{ margin: '0', fontSize: '9pt' }}>Telp/fax. 0335-422307 Website: smpmusapro.sch.id</p>
@@ -966,6 +967,11 @@ export default function App() {
       
       <div style={{ borderTop: '2.5pt solid black', marginTop: '6pt', width: '100%', boxSizing: 'border-box' }}></div>
       <div style={{ borderTop: '0.5pt solid black', marginTop: '2pt', width: '100%', marginBottom: '10pt', boxSizing: 'border-box' }}></div>
+      {mainTab === 'soal' && (
+        <div style={{ textAlign: 'center', marginBottom: '10pt' }}>
+          <div style={{ fontSize: '12pt', fontWeight: 'bold', textTransform: 'uppercase' }}>Mata Pelajaran: {displaySubject}</div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1215,7 +1221,13 @@ export default function App() {
                       <div className="grid grid-cols-2 gap-2">
                          <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-400 ml-1">Jumlah Pilgan</label>
-                            <input type="number" value={numPilgan} onChange={e => setNumPilgan(parseInt(e.target.value) || 0)} className="w-full p-2 border rounded bg-white font-bold" />
+                            <input 
+                              type="number" 
+                              value={noPilganMode && mainTab === 'soal' ? 0 : numPilgan} 
+                              onChange={e => setNumPilgan(parseInt(e.target.value) || 0)} 
+                              disabled={noPilganMode && mainTab === 'soal'}
+                              className="w-full p-2 border rounded bg-white font-bold disabled:opacity-50" 
+                            />
                          </div>
                          <div className="space-y-1">
                             <label className="text-[10px] font-bold text-slate-400 ml-1">Jumlah Essay</label>
@@ -1553,6 +1565,14 @@ export default function App() {
                         </div>
                         
                          <div className="flex items-center gap-4 pt-2">
+                          <label className="flex items-center gap-2 cursor-pointer group">
+                            <div className={`w-10 h-5 rounded-full transition-all relative ${noPilganMode ? 'bg-blue-600' : 'bg-slate-300'}`}>
+                              <input type="checkbox" checked={noPilganMode} onChange={e => setNoPilganMode(e.target.checked)} className="hidden" />
+                              <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${noPilganMode ? 'left-6' : 'left-1'}`}></div>
+                            </div>
+                            <span className="text-[10px] font-black text-slate-500 uppercase group-hover:text-blue-600">Mode Tanpa Pilgan</span>
+                          </label>
+
                           <label className="flex items-center gap-2 cursor-pointer group">
                             <div className={`w-10 h-5 rounded-full transition-all relative ${noEssayMode ? 'bg-blue-600' : 'bg-slate-300'}`}>
                               <input type="checkbox" checked={noEssayMode} onChange={e => setNoEssayMode(e.target.checked)} className="hidden" />
@@ -1957,95 +1977,103 @@ export default function App() {
                       <div className="section-block">
                         <IdentityTable />
                       </div>
-                      <div className="mt-6 text-left">
-                        <div className="section-block">
-                          <div className="font-bold border-b-2 border-black mb-4 text-[13px] uppercase">Bagian I: Instrumen Pilihan Ganda</div>
-                        </div>
-                        <div className="space-y-4">
-                          {result.evaluasi.pilgan.map((item, idx) => (
-                            <div key={idx} className="mb-4 section-block" style={{ pageBreakInside: 'avoid' }}>
-                              <div className="font-bold text-[12px] mb-1 flex gap-2 items-start">
-                                <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
-                                <span className="flex-1">{item.soal}</span>
-                                {isEditMode && (
-                                  <button 
-                                    onClick={() => handleGenerateImage(item.soal, idx, 'pilgan')}
-                                    className="p-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-all no-print shrink-0"
-                                    title="Generate Gambar"
-                                  >
-                                    <ImageIcon size={12} />
-                                  </button>
-                                )}
-                              </div>
-                              {item.image && (
-                                <div className="my-2 flex justify-center relative group">
-                                  <img src={item.image} alt="Ilustrasi Soal" className="max-w-[200px] border border-slate-200 rounded shadow-sm" referrerPolicy="no-referrer" />
-                                  {isEditMode && (
-                                    <button 
-                                      onClick={() => {
-                                        const newRes = {...result};
-                                        delete newRes.evaluasi.pilgan[idx].image;
-                                        setResult(newRes);
-                                      }}
-                                      className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      <X size={10} />
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                              <div className="grid grid-cols-2 gap-x-10 pl-5 text-[11px]">
-                                <div className="flex gap-1"><span className="shrink-0">A.</span><span>{item.a}</span></div>
-                                <div className="flex gap-1"><span className="shrink-0">C.</span><span>{item.c}</span></div>
-                                <div className="flex gap-1"><span className="shrink-0">B.</span><span>{item.b}</span></div>
-                                <div className="flex gap-1"><span className="shrink-0">D.</span><span>{item.d}</span></div>
-                              </div>
-                              {showAnswers && <div className="mt-1 text-blue-800 font-bold italic pl-5 text-[11px] bg-blue-50 py-1 rounded">Kunci Jawaban: {item.kunci?.toUpperCase()}</div>}
+                       <div className="mt-6 text-left">
+                        {!noPilganMode && (
+                          <>
+                            <div className="section-block">
+                              <div className="font-bold border-b-2 border-black mb-4 text-[13px] uppercase">Bagian I: Penilaian Pilihan Ganda</div>
                             </div>
-                          ))}
-                        </div>
+                            <div className="space-y-4">
+                              {result.evaluasi.pilgan.map((item, idx) => (
+                                <div key={idx} className="mb-4 section-block" style={{ pageBreakInside: 'avoid' }}>
+                                  <div className="font-bold text-[12px] mb-1 flex gap-2 items-start">
+                                    <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
+                                    <span className="flex-1">{item.soal}</span>
+                                    {isEditMode && (
+                                      <button 
+                                        onClick={() => handleGenerateImage(item.soal, idx, 'pilgan')}
+                                        className="p-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-all no-print shrink-0"
+                                        title="Generate Gambar"
+                                      >
+                                        <ImageIcon size={12} />
+                                      </button>
+                                    )}
+                                  </div>
+                                  {item.image && (
+                                    <div className="my-2 flex justify-center relative group">
+                                      <img src={item.image} alt="Ilustrasi Soal" className="max-w-[200px] border border-slate-200 rounded shadow-sm" referrerPolicy="no-referrer" />
+                                      {isEditMode && (
+                                        <button 
+                                          onClick={() => {
+                                            const newRes = {...result};
+                                            delete newRes.evaluasi.pilgan[idx].image;
+                                            setResult(newRes);
+                                          }}
+                                          className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          <X size={10} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                  <div className="grid grid-cols-2 gap-x-10 pl-5 text-[11px]">
+                                    <div className="flex gap-1"><span className="shrink-0">A.</span><span>{item.a}</span></div>
+                                    <div className="flex gap-1"><span className="shrink-0">C.</span><span>{item.c}</span></div>
+                                    <div className="flex gap-1"><span className="shrink-0">B.</span><span>{item.b}</span></div>
+                                    <div className="flex gap-1"><span className="shrink-0">D.</span><span>{item.d}</span></div>
+                                  </div>
+                                  {showAnswers && <div className="mt-1 text-blue-800 font-bold italic pl-5 text-[11px] bg-blue-50 py-1 rounded">Kunci Jawaban: {item.kunci?.toUpperCase()}</div>}
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
                         
-                        <div className="section-block" style={{ pageBreakInside: 'avoid', marginTop: '20pt' }}>
-                          <div className="font-bold border-b-2 border-black mb-4 mt-8 text-[13px] uppercase">Bagian II: Instrumen Essay</div>
-                        </div>
-                        <div className="space-y-8">
-                          {result.evaluasi.essay.map((item, idx) => (
-                            <div key={idx} className="mb-6 section-block" style={{ pageBreakInside: 'avoid' }}>
-                              <div className="font-bold text-[12px] mb-2 flex gap-2 items-start">
-                                <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
-                                <span className="flex-1">{item.soal}</span>
-                                {isEditMode && (
-                                  <button 
-                                    onClick={() => handleGenerateImage(item.soal, idx, 'essay')}
-                                    className="p-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-all no-print shrink-0"
-                                    title="Generate Gambar"
-                                  >
-                                    <ImageIcon size={12} />
-                                  </button>
-                                )}
-                              </div>
-                              {item.image && (
-                                <div className="my-2 flex justify-center relative group">
-                                  <img src={item.image} alt="Ilustrasi Soal" className="max-w-[200px] border border-slate-200 rounded shadow-sm" referrerPolicy="no-referrer" />
-                                  {isEditMode && (
-                                    <button 
-                                      onClick={() => {
-                                        const newRes = {...result};
-                                        delete newRes.evaluasi.essay[idx].image;
-                                        setResult(newRes);
-                                      }}
-                                      className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                      <X size={10} />
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                              <div className="h-24 border border-slate-400 mt-2 mb-2 w-full"></div>
-                              {showAnswers && <div className="text-blue-800 text-[11px] font-bold italic bg-blue-50 p-2 rounded">Pedoman Jawaban: {item.kunci}</div>}
+                        {!noEssayMode && (
+                          <>
+                            <div className="section-block" style={{ pageBreakInside: 'avoid', marginTop: '20pt' }}>
+                              <div className="font-bold border-b-2 border-black mb-4 mt-8 text-[13px] uppercase">Bagian II: Penilaian Essay</div>
                             </div>
-                          ))}
-                        </div>
+                            <div className="space-y-8">
+                              {result.evaluasi.essay.map((item, idx) => (
+                                <div key={idx} className="mb-6 section-block" style={{ pageBreakInside: 'avoid' }}>
+                                  <div className="font-bold text-[12px] mb-2 flex gap-2 items-start">
+                                    <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
+                                    <span className="flex-1">{item.soal}</span>
+                                    {isEditMode && (
+                                      <button 
+                                        onClick={() => handleGenerateImage(item.soal, idx, 'essay')}
+                                        className="p-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-all no-print shrink-0"
+                                        title="Generate Gambar"
+                                      >
+                                        <ImageIcon size={12} />
+                                      </button>
+                                    )}
+                                  </div>
+                                  {item.image && (
+                                    <div className="my-2 flex justify-center relative group">
+                                      <img src={item.image} alt="Ilustrasi Soal" className="max-w-[200px] border border-slate-200 rounded shadow-sm" referrerPolicy="no-referrer" />
+                                      {isEditMode && (
+                                        <button 
+                                          onClick={() => {
+                                            const newRes = {...result};
+                                            delete newRes.evaluasi.essay[idx].image;
+                                            setResult(newRes);
+                                          }}
+                                          className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          <X size={10} />
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                  <div className="h-24 border border-slate-400 mt-2 mb-2 w-full"></div>
+                                  {showAnswers && <div className="text-blue-800 text-[11px] font-bold italic bg-blue-50 p-2 rounded">Pedoman Jawaban: {item.kunci}</div>}
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   ) : (

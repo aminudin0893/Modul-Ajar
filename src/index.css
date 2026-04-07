@@ -65,4 +65,14 @@
       border-color: #eee !important;
     }
   }
+
+  .section-block {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .header-bg {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
 }
