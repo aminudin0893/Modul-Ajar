@@ -62,7 +62,7 @@ interface ResultData {
   penugasanIndividu: { judul: string; instruksi: string };
   rubrikPenilaian: Array<{ kriteria: string; sangatBaik: string; baik: string; cukup: string; perluBimbingan: string }>;
   evaluasi: {
-    pilgan: Array<{ soal: string; a: string; b: string; c: string; d: string; kunci: string; image?: string }>;
+    pilgan: Array<{ soal: string; a: string; b: string; c: string; d: string; kunci: string; image?: string; imageA?: string; imageB?: string; imageC?: string; imageD?: string }>;
     essay: Array<{ soal: string; kunci: string; image?: string }>;
   };
   kisiKisi: Array<{ no: number; materi: string; indikator: string; level: string; bloom: string; bentukSoal: string }>;
@@ -138,6 +138,8 @@ export default function App() {
   const [isChatMaximized, setIsChatMaximized] = useState(false);
   const [isChatMinimized, setIsChatMinimized] = useState(false);
   const [includeDalil, setIncludeDalil] = useState(true);
+  const [uploadTarget, setUploadTarget] = useState<{ index: number; type: 'pilgan' | 'essay'; subType?: 'soal' | 'a' | 'b' | 'c' | 'd' } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // --- STATE KALENDER PENDIDIKAN ---
   const [showCalendar, setShowCalendar] = useState(false);
@@ -841,51 +843,39 @@ export default function App() {
     }, 1000); // Tambahkan sedikit waktu agar mindmap sempat terbuka semua
   };
 
-  const handleGenerateImage = async (prompt: string, index: number, type: 'pilgan' | 'essay') => {
-    if (!result) return;
-    
-    const apiKeyToUse = userApiKey || process.env.GEMINI_API_KEY || "";
-    if (!apiKeyToUse) {
-      setError("Kode aplikasi tidak ditemukan. Silakan masukkan kode pembelian anda di panel pengaturan.");
-      return;
+  const triggerUpload = (index: number, type: 'pilgan' | 'essay', subType: 'soal' | 'a' | 'b' | 'c' | 'd' = 'soal') => {
+    setUploadTarget({ index, type, subType });
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
+  };
 
-    setIsGeneratingMateri(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: apiKeyToUse });
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [{ text: `Generate a high-quality educational illustration for this school question: "${prompt}". Style: clean, professional, educational illustration, no text in image.` }],
-        },
-        config: {
-          imageConfig: { aspectRatio: "1:1" }
-        }
-      });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !uploadTarget || !result) return;
 
-      let imageUrl = "";
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          imageUrl = `data:image/png;base64,${part.inlineData.data}`;
-          break;
-        }
-      }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      const newResult = { ...result };
+      const { index, type, subType } = uploadTarget;
 
-      if (imageUrl) {
-        const newResult = { ...result };
-        if (type === 'pilgan') {
-          newResult.evaluasi.pilgan[index].image = imageUrl;
+      if (type === 'pilgan') {
+        if (subType === 'soal') {
+          newResult.evaluasi.pilgan[index].image = base64String;
         } else {
-          newResult.evaluasi.essay[index].image = imageUrl;
+          const key = `image${subType.toUpperCase()}` as keyof typeof newResult.evaluasi.pilgan[0];
+          // @ts-ignore
+          newResult.evaluasi.pilgan[index][key] = base64String;
         }
-        setResult(newResult);
+      } else {
+        newResult.evaluasi.essay[index].image = base64String;
       }
-    } catch (err) {
-      console.error("Image Generation Error:", err);
-      setError("Gagal menghasilkan gambar. Silakan coba lagi.");
-    } finally {
-      setIsGeneratingMateri(false);
-    }
+      setResult(newResult);
+      setUploadTarget(null);
+      e.target.value = ''; 
+    };
+    reader.readAsDataURL(file);
   };
 
   const exportToWord = (ext: string) => {
@@ -2024,13 +2014,15 @@ export default function App() {
                                     <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
                                     <span className="flex-1">{item.soal}</span>
                                     {isEditMode && (
-                                      <button 
-                                        onClick={() => handleGenerateImage(item.soal, idx, 'pilgan')}
-                                        className="p-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-all no-print shrink-0"
-                                        title="Generate Gambar"
-                                      >
-                                        <ImageIcon size={12} />
-                                      </button>
+                                      <div className="flex gap-1 no-print">
+                                        <button 
+                                          onClick={() => triggerUpload(idx, 'pilgan', 'soal')}
+                                          className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-all shrink-0"
+                                          title="Upload Gambar"
+                                        >
+                                          <Upload size={12} />
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
                                   {item.image && (
@@ -2051,10 +2043,74 @@ export default function App() {
                                     </div>
                                   )}
                                   <div className="grid grid-cols-2 gap-x-10 pl-5 text-[11px]">
-                                    <div className="flex gap-1"><span className="shrink-0">A.</span><span>{item.a}</span></div>
-                                    <div className="flex gap-1"><span className="shrink-0">C.</span><span>{item.c}</span></div>
-                                    <div className="flex gap-1"><span className="shrink-0">B.</span><span>{item.b}</span></div>
-                                    <div className="flex gap-1"><span className="shrink-0">D.</span><span>{item.d}</span></div>
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex gap-1">
+                                        <span className="shrink-0">A.</span>
+                                        <span>{item.a}</span>
+                                        {isEditMode && (
+                                          <button onClick={() => triggerUpload(idx, 'pilgan', 'a')} className="ml-auto no-print text-slate-400 hover:text-blue-600" title="Upload Gambar Opsi A"><Upload size={10}/></button>
+                                        )}
+                                      </div>
+                                      {item.imageA && (
+                                        <div className="relative group w-fit mb-2">
+                                          <img src={item.imageA} className="max-w-[100px] rounded border border-slate-200" referrerPolicy="no-referrer" />
+                                          {isEditMode && (
+                                            <button onClick={() => { const nr = {...result!}; delete nr.evaluasi.pilgan[idx].imageA; setResult(nr); }} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={8}/></button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex gap-1">
+                                        <span className="shrink-0">C.</span>
+                                        <span>{item.c}</span>
+                                        {isEditMode && (
+                                          <button onClick={() => triggerUpload(idx, 'pilgan', 'c')} className="ml-auto no-print text-slate-400 hover:text-blue-600" title="Upload Gambar Opsi C"><Upload size={10}/></button>
+                                        )}
+                                      </div>
+                                      {item.imageC && (
+                                        <div className="relative group w-fit mb-2">
+                                          <img src={item.imageC} className="max-w-[100px] rounded border border-slate-200" referrerPolicy="no-referrer" />
+                                          {isEditMode && (
+                                            <button onClick={() => { const nr = {...result!}; delete nr.evaluasi.pilgan[idx].imageC; setResult(nr); }} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={8}/></button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex gap-1">
+                                        <span className="shrink-0">B.</span>
+                                        <span>{item.b}</span>
+                                        {isEditMode && (
+                                          <button onClick={() => triggerUpload(idx, 'pilgan', 'b')} className="ml-auto no-print text-slate-400 hover:text-blue-600" title="Upload Gambar Opsi B"><Upload size={10}/></button>
+                                        )}
+                                      </div>
+                                      {item.imageB && (
+                                        <div className="relative group w-fit mb-2">
+                                          <img src={item.imageB} className="max-w-[100px] rounded border border-slate-200" referrerPolicy="no-referrer" />
+                                          {isEditMode && (
+                                            <button onClick={() => { const nr = {...result!}; delete nr.evaluasi.pilgan[idx].imageB; setResult(nr); }} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={8}/></button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex gap-1">
+                                        <span className="shrink-0">D.</span>
+                                        <span>{item.d}</span>
+                                        {isEditMode && (
+                                          <button onClick={() => triggerUpload(idx, 'pilgan', 'd')} className="ml-auto no-print text-slate-400 hover:text-blue-600" title="Upload Gambar Opsi D"><Upload size={10}/></button>
+                                        )}
+                                      </div>
+                                      {item.imageD && (
+                                        <div className="relative group w-fit mb-2">
+                                          <img src={item.imageD} className="max-w-[100px] rounded border border-slate-200" referrerPolicy="no-referrer" />
+                                          {isEditMode && (
+                                            <button onClick={() => { const nr = {...result!}; delete nr.evaluasi.pilgan[idx].imageD; setResult(nr); }} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={8}/></button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                   {showAnswers && <div className="mt-1 text-blue-800 font-bold italic pl-5 text-[11px] bg-blue-50 py-1 rounded">Kunci Jawaban: {item.kunci?.toUpperCase()}</div>}
                                 </div>
@@ -2075,13 +2131,15 @@ export default function App() {
                                     <span className="shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
                                     <span className="flex-1">{item.soal}</span>
                                     {isEditMode && (
-                                      <button 
-                                        onClick={() => handleGenerateImage(item.soal, idx, 'essay')}
-                                        className="p-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 transition-all no-print shrink-0"
-                                        title="Generate Gambar"
-                                      >
-                                        <ImageIcon size={12} />
-                                      </button>
+                                      <div className="flex gap-1 no-print">
+                                        <button 
+                                          onClick={() => triggerUpload(idx, 'essay', 'soal')}
+                                          className="p-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-all shrink-0"
+                                          title="Upload Gambar"
+                                        >
+                                          <Upload size={12} />
+                                        </button>
+                                      </div>
                                     )}
                                   </div>
                                   {item.image && (
@@ -2369,6 +2427,13 @@ export default function App() {
       </div>
       
       {/* REFRESH BUTTON */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileChange} 
+        accept="image/*" 
+        className="hidden" 
+      />
       {!isExportingMode && (
         <button 
           onClick={() => window.location.reload()}
