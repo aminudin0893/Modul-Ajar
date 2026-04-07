@@ -1981,7 +1981,7 @@ export default function App() {
                         {!noPilganMode && (
                           <>
                             <div className="section-block">
-                              <div className="font-bold border-b-2 border-black mb-4 text-[13px] uppercase">Bagian I: Penilaian Pilihan Ganda</div>
+                              <div className="font-bold border-b-2 border-black mb-4 text-[13px] uppercase">Bagian : Penilaian Pilihan Ganda</div>
                             </div>
                             <div className="space-y-4">
                               {result.evaluasi.pilgan.map((item, idx) => (
@@ -2032,7 +2032,7 @@ export default function App() {
                         {!noEssayMode && (
                           <>
                             <div className="section-block" style={{ pageBreakInside: 'avoid', marginTop: '20pt' }}>
-                              <div className="font-bold border-b-2 border-black mb-4 mt-8 text-[13px] uppercase">Bagian II: Penilaian Essay</div>
+                              <div className="font-bold border-b-2 border-black mb-4 mt-8 text-[13px] uppercase">Bagian : Penilaian Essay</div>
                             </div>
                             <div className="space-y-8">
                               {result.evaluasi.essay.map((item, idx) => (
