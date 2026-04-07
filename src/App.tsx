@@ -4,7 +4,8 @@ import {
   MapPin, Calendar, School, UserCheck, AlertTriangle, RefreshCw,
   Maximize2, FileText, Layout, Users, User, ClipboardList, PenTool, FileType, Eye, EyeOff, Copy,
   CheckCircle2, Printer, Upload, Trash2, MessageSquare, Plus, Minus,
-  Send, Smile, Paperclip, Edit3, Save, X
+  Send, Smile, Paperclip, Edit3, Save, X,
+  Bold, Italic, Underline, Strikethrough
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -1777,26 +1778,59 @@ export default function App() {
 
           {/* PREVIEW AREA */}
           {result && mainTab !== 'konsultasi' && (
-            <div ref={exportAreaRef}
-                 id="export-area"
-                 contentEditable={isEditMode}
-                 suppressContentEditableWarning={true}
-                 className={`bg-white text-black font-serif transition-all ${isExportingMode ? 'p-0 shadow-none border-none' : 'p-10 shadow-2xl border border-slate-300 mb-20'} ${isEditMode ? 'outline-2 outline-dashed outline-amber-400 cursor-text' : ''}`} 
-                 style={{ 
-                   width: isExportingMode ? (activeTab === 'prosem' ? '277mm' : '190mm') : 'auto', 
-                   maxWidth: isExportingMode ? (activeTab === 'prosem' ? '277mm' : '190mm') : (activeTab === 'prosem' ? '297mm' : '210mm'),
-                   fontSize: '11px', 
-                   boxSizing: 'border-box',
-                   height: 'auto',
-                   overflow: 'visible',
-                   // Menonaktifkan margin auto saat ekspor agar koordinat tepat di 0 (kiri)
-                   marginLeft: isExportingMode ? '0' : 'auto', 
-                   marginRight: isExportingMode ? '0' : 'auto',
-                   padding: isExportingMode ? '0' : '40px',
-                   backgroundColor: '#ffffff',
-                   letterSpacing: isExportingMode ? '0.2px' : 'normal',
-                   wordSpacing: isExportingMode ? '0.4px' : 'normal'
-                 }}>
+            <>
+              {isEditMode && (
+                <div className="flex items-center gap-1 bg-white p-1 rounded-lg shadow-md border border-slate-200 mb-2 sticky top-20 z-[60] w-fit mx-auto no-print">
+                  <button 
+                    onClick={() => document.execCommand('bold', false)} 
+                    className="p-2 hover:bg-slate-100 rounded transition-colors text-slate-700"
+                    title="Tebal (Ctrl+B)"
+                  >
+                    <Bold size={16} />
+                  </button>
+                  <button 
+                    onClick={() => document.execCommand('italic', false)} 
+                    className="p-2 hover:bg-slate-100 rounded transition-colors text-slate-700"
+                    title="Miring (Ctrl+I)"
+                  >
+                    <Italic size={16} />
+                  </button>
+                  <button 
+                    onClick={() => document.execCommand('underline', false)} 
+                    className="p-2 hover:bg-slate-100 rounded transition-colors text-slate-700"
+                    title="Garis Bawah (Ctrl+U)"
+                  >
+                    <Underline size={16} />
+                  </button>
+                  <button 
+                    onClick={() => document.execCommand('strikeThrough', false)} 
+                    className="p-2 hover:bg-slate-100 rounded transition-colors text-slate-700"
+                    title="Coret"
+                  >
+                    <Strikethrough size={16} />
+                  </button>
+                </div>
+              )}
+              <div ref={exportAreaRef}
+                   id="export-area"
+                   contentEditable={isEditMode}
+                   suppressContentEditableWarning={true}
+                   className={`bg-white text-black font-serif transition-all ${isExportingMode ? 'p-0 shadow-none border-none' : 'p-10 shadow-2xl border border-slate-300 mb-20'} ${isEditMode ? 'outline-2 outline-dashed outline-amber-400 cursor-text' : ''}`} 
+                   style={{ 
+                     width: isExportingMode ? (activeTab === 'prosem' ? '277mm' : '190mm') : 'auto', 
+                     maxWidth: isExportingMode ? (activeTab === 'prosem' ? '277mm' : '190mm') : (activeTab === 'prosem' ? '297mm' : '210mm'),
+                     fontSize: '11px', 
+                     boxSizing: 'border-box',
+                     height: 'auto',
+                     overflow: 'visible',
+                     // Menonaktifkan margin auto saat ekspor agar koordinat tepat di 0 (kiri)
+                     marginLeft: isExportingMode ? '0' : 'auto', 
+                     marginRight: isExportingMode ? '0' : 'auto',
+                     padding: isExportingMode ? '0' : '40px',
+                     backgroundColor: '#ffffff',
+                     letterSpacing: isExportingMode ? '0.2px' : 'normal',
+                     wordSpacing: isExportingMode ? '0.4px' : 'normal'
+                   }}>
               
               {/* --- HEADER --- */}
               <div className="section-block" style={{ pageBreakInside: 'avoid' }}>
@@ -2329,6 +2363,7 @@ export default function App() {
                 </div>
               )}
             </div>
+          </>
           )}
         </div>
       </div>
