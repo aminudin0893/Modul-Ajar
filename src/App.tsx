@@ -5,7 +5,8 @@ import {
   Maximize2, FileText, Layout, Users, User, ClipboardList, PenTool, FileType, Eye, EyeOff, Copy,
   CheckCircle2, Printer, Upload, Trash2, MessageSquare, Plus, Minus,
   Send, Smile, Paperclip, Edit3, Save, X,
-  Bold, Italic, Underline, Strikethrough
+  Bold, Italic, Underline, Strikethrough,
+  AlignLeft, AlignCenter, AlignRight
 } from 'lucide-react';
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -62,8 +63,18 @@ interface ResultData {
   penugasanIndividu: { judul: string; instruksi: string };
   rubrikPenilaian: Array<{ kriteria: string; sangatBaik: string; baik: string; cukup: string; perluBimbingan: string }>;
   evaluasi: {
-    pilgan: Array<{ soal: string; a: string; b: string; c: string; d: string; kunci: string; image?: string; imageA?: string; imageB?: string; imageC?: string; imageD?: string }>;
-    essay: Array<{ soal: string; kunci: string; image?: string }>;
+    pilgan: Array<{ 
+      soal: string; a: string; b: string; c: string; d: string; kunci: string; 
+      image?: string; imageA?: string; imageB?: string; imageC?: string; imageD?: string;
+      imageAlign?: 'left' | 'center' | 'right';
+      imageSize?: number;
+    }>;
+    essay: Array<{ 
+      soal: string; kunci: string; 
+      image?: string;
+      imageAlign?: 'left' | 'center' | 'right';
+      imageSize?: number;
+    }>;
   };
   kisiKisi: Array<{ no: number; materi: string; indikator: string; level: string; bloom: string; bentukSoal: string }>;
   prota: Array<{ semester: string; materi: string; alokasiWaktu: string }>;
@@ -1830,8 +1841,8 @@ export default function App() {
                       {logoBase64 && <img src={logoBase64} alt="Logo" style={{ width: '85px', height: '85px', objectFit: 'contain' }} crossOrigin="anonymous" />}
                     </div>
                     <h1 className="font-bold uppercase m-0 mt-3 text-center leading-tight" style={{ fontSize: '15pt' }}>{namaSekolah}</h1>
-                    <div style={{ width: '100%', height: '2pt', backgroundColor: 'black', marginTop: '10pt' }}></div>
-                    <div style={{ width: '100%', height: '0.5pt', backgroundColor: 'black', marginTop: '2pt' }}></div>
+                    <div style={{ width: '100%', height: '0pt', backgroundColor: 'white', marginTop: '10pt' }}></div>
+                    <div style={{ width: '100%', height: '0.5pt', backgroundColor: 'white', marginTop: '2pt' }}></div>
                   </div>
                 ) : (
                   <InstitutionalKop />
@@ -2026,19 +2037,35 @@ export default function App() {
                                     )}
                                   </div>
                                   {item.image && (
-                                    <div className="my-2 flex justify-center relative group">
-                                      <img src={item.image} alt="Ilustrasi Soal" className="max-w-[200px] border border-slate-200 rounded shadow-sm" referrerPolicy="no-referrer" />
+                                    <div className={`my-2 flex ${item.imageAlign === 'left' ? 'justify-start' : item.imageAlign === 'right' ? 'justify-end' : 'justify-center'} relative group`}>
+                                      <img 
+                                        src={item.image} 
+                                        alt="Ilustrasi Soal" 
+                                        className="border border-slate-200 rounded shadow-sm" 
+                                        style={{ maxWidth: `${item.imageSize || 200}px` }}
+                                        referrerPolicy="no-referrer" 
+                                      />
                                       {isEditMode && (
-                                        <button 
-                                          onClick={() => {
-                                            const newRes = {...result};
-                                            delete newRes.evaluasi.pilgan[idx].image;
-                                            setResult(newRes);
-                                          }}
-                                          className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <X size={10} />
-                                        </button>
+                                        <div className="absolute top-0 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded-bl-lg shadow-md no-print border border-slate-200">
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.pilgan[idx].imageAlign = 'left'; setResult(nr); }} className={`p-1 hover:bg-slate-200 rounded ${item.imageAlign === 'left' ? 'bg-blue-100 text-blue-600' : ''}`} title="Rata Kiri"><AlignLeft size={12}/></button>
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.pilgan[idx].imageAlign = 'center'; setResult(nr); }} className={`p-1 hover:bg-slate-200 rounded ${(!item.imageAlign || item.imageAlign === 'center') ? 'bg-blue-100 text-blue-600' : ''}`} title="Rata Tengah"><AlignCenter size={12}/></button>
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.pilgan[idx].imageAlign = 'right'; setResult(nr); }} className={`p-1 hover:bg-slate-200 rounded ${item.imageAlign === 'right' ? 'bg-blue-100 text-blue-600' : ''}`} title="Rata Kanan"><AlignRight size={12}/></button>
+                                          <div className="w-[1px] bg-slate-200 mx-1"></div>
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.pilgan[idx].imageSize = Math.min((nr.evaluasi.pilgan[idx].imageSize || 200) + 20, 600); setResult(nr); }} className="p-1 hover:bg-slate-200 rounded" title="Perbesar"><Plus size={12}/></button>
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.pilgan[idx].imageSize = Math.max((nr.evaluasi.pilgan[idx].imageSize || 200) - 20, 50); setResult(nr); }} className="p-1 hover:bg-slate-200 rounded" title="Perkecil"><Minus size={12}/></button>
+                                          <div className="w-[1px] bg-slate-200 mx-1"></div>
+                                          <button 
+                                            onClick={() => {
+                                              const newRes = {...result!};
+                                              delete newRes.evaluasi.pilgan[idx].image;
+                                              setResult(newRes);
+                                            }}
+                                            className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
+                                            title="Hapus Gambar"
+                                          >
+                                            <X size={10} />
+                                          </button>
+                                        </div>
                                       )}
                                     </div>
                                   )}
@@ -2143,19 +2170,35 @@ export default function App() {
                                     )}
                                   </div>
                                   {item.image && (
-                                    <div className="my-2 flex justify-center relative group">
-                                      <img src={item.image} alt="Ilustrasi Soal" className="max-w-[200px] border border-slate-200 rounded shadow-sm" referrerPolicy="no-referrer" />
+                                    <div className={`my-2 flex ${item.imageAlign === 'left' ? 'justify-start' : item.imageAlign === 'right' ? 'justify-end' : 'justify-center'} relative group`}>
+                                      <img 
+                                        src={item.image} 
+                                        alt="Ilustrasi Soal" 
+                                        className="border border-slate-200 rounded shadow-sm" 
+                                        style={{ maxWidth: `${item.imageSize || 200}px` }}
+                                        referrerPolicy="no-referrer" 
+                                      />
                                       {isEditMode && (
-                                        <button 
-                                          onClick={() => {
-                                            const newRes = {...result};
-                                            delete newRes.evaluasi.essay[idx].image;
-                                            setResult(newRes);
-                                          }}
-                                          className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <X size={10} />
-                                        </button>
+                                        <div className="absolute top-0 right-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded-bl-lg shadow-md no-print border border-slate-200">
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.essay[idx].imageAlign = 'left'; setResult(nr); }} className={`p-1 hover:bg-slate-200 rounded ${item.imageAlign === 'left' ? 'bg-blue-100 text-blue-600' : ''}`} title="Rata Kiri"><AlignLeft size={12}/></button>
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.essay[idx].imageAlign = 'center'; setResult(nr); }} className={`p-1 hover:bg-slate-200 rounded ${(!item.imageAlign || item.imageAlign === 'center') ? 'bg-blue-100 text-blue-600' : ''}`} title="Rata Tengah"><AlignCenter size={12}/></button>
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.essay[idx].imageAlign = 'right'; setResult(nr); }} className={`p-1 hover:bg-slate-200 rounded ${item.imageAlign === 'right' ? 'bg-blue-100 text-blue-600' : ''}`} title="Rata Kanan"><AlignRight size={12}/></button>
+                                          <div className="w-[1px] bg-slate-200 mx-1"></div>
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.essay[idx].imageSize = Math.min((nr.evaluasi.essay[idx].imageSize || 200) + 20, 600); setResult(nr); }} className="p-1 hover:bg-slate-200 rounded" title="Perbesar"><Plus size={12}/></button>
+                                          <button onClick={() => { const nr = {...result!}; nr.evaluasi.essay[idx].imageSize = Math.max((nr.evaluasi.essay[idx].imageSize || 200) - 20, 50); setResult(nr); }} className="p-1 hover:bg-slate-200 rounded" title="Perkecil"><Minus size={12}/></button>
+                                          <div className="w-[1px] bg-slate-200 mx-1"></div>
+                                          <button 
+                                            onClick={() => {
+                                              const newRes = {...result!};
+                                              delete newRes.evaluasi.essay[idx].image;
+                                              setResult(newRes);
+                                            }}
+                                            className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
+                                            title="Hapus Gambar"
+                                          >
+                                            <X size={10} />
+                                          </button>
+                                        </div>
                                       )}
                                     </div>
                                   )}
